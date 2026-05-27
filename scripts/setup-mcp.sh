@@ -75,14 +75,22 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 echo "  ✅ uv: $(uv --version)"
 
-# ─── 4. 寫入 ~/.claude.json ──────────────────────────────────
+# ─── 4. 寫入 ~/.claude.json（授權驗證點） ────────────────────
 CLAUDE_JSON="$HOME/.claude.json"
 echo
-echo "  📝 寫入 $CLAUDE_JSON 的 mcpServers.illustrator..."
+echo "  🔐 授權驗證點：即將寫入 ${CLAUDE_JSON}"
+echo "      內容：mcpServers.illustrator = uv --directory ${SV_MCP_DIR} run illustrator"
+echo "      行為：若 ~/.claude.json 已存在，先備份至 .bak 再 atomic write"
+echo "      （若您透過 Claude Code 執行此腳本，應該已在前一步驟取得您口頭授權）"
+
+if [ "$NON_INTERACTIVE" != "1" ]; then
+    read -p "  → 繼續寫入？[Y/n] " yn
+    case "$yn" in [Nn]*) echo "  → 中止寫入"; exit 1 ;; esac
+fi
 
 if [ -f "$CLAUDE_JSON" ]; then
     cp "$CLAUDE_JSON" "$CLAUDE_JSON.bak"
-    echo "    （已備份至 ${CLAUDE_JSON}.bak）"
+    echo "  ✅ 備份至 ${CLAUDE_JSON}.bak"
 fi
 
 SV_MCP_DIR_EXPORT="$SV_MCP_DIR" python3 <<'PYEOF'

@@ -162,11 +162,13 @@ fi
 if [ "$NON_INTERACTIVE" = "1" ]; then
     out_base="$default_output"
     tpl="$default_template"
+    confirmed=0   # 沒互動，留待首次製作名片時引導確認
 else
     read -p "  名片輸出資料夾 [$default_output]: " out_base
     out_base="${out_base:-$default_output}"
     read -p "  模板 .ai 路徑 [$default_template]: " tpl
     tpl="${tpl:-$default_template}"
+    confirmed=1
 fi
 
 cat > "$CONFIG_FILE" <<EOF
@@ -174,19 +176,83 @@ cat > "$CONFIG_FILE" <<EOF
 # card_helper.sh 啟動時會 source 此檔
 SV_OUTPUT_BASE="$out_base"
 SV_TEMPLATE="$tpl"
+SV_OUTPUT_CONFIRMED=$confirmed
 EOF
-echo "  ✅ 寫入 $CONFIG_FILE"
+echo "  ✅ 寫入 ${CONFIG_FILE}（SV_OUTPUT_CONFIRMED=$confirmed）"
 echo
 
-# ─── 4. 完成 ──────────────────────────────────────────────────
+# ─── 4. 寫入 Claude Code allow 清單 ─────────────────────────
+SETTINGS_FILE="$HOME/.claude/settings.json"
+echo "🛡️  設定 Claude Code 權限白名單 ${SETTINGS_FILE}"
+echo "    （將加入 sv-card 相關 Bash 腳本 + mcp__illustrator__run，"
+echo "     日常做名片時不會被 permission prompt 中斷）"
+
+if [ "$NON_INTERACTIVE" = "1" ]; then
+    write_allow=1
+else
+    read -p "  → 寫入 allow 清單？[Y/n] " yn
+    case "$yn" in [Nn]*) write_allow=0 ;; *) write_allow=1 ;; esac
+fi
+
+if [ "$write_allow" = "1" ]; then
+    SETTINGS_FILE_EXPORT="$SETTINGS_FILE" python3 <<'PYEOF'
+import json, os, shutil
+from pathlib import Path
+
+path = Path(os.environ["SETTINGS_FILE_EXPORT"])
+path.parent.mkdir(parents=True, exist_ok=True)
+
+if path.exists():
+    backup = Path(str(path) + ".bak")
+    shutil.copy(path, backup)
+    print(f"  ✅ 備份原檔: {backup}")
+    try:
+        data = json.loads(path.read_text())
+    except json.JSONDecodeError:
+        print("  ❌ settings.json 不是合法 JSON，跳過寫入")
+        raise SystemExit(0)
+else:
+    data = {}
+
+data.setdefault("permissions", {}).setdefault("allow", [])
+allow = data["permissions"]["allow"]
+home = os.path.expanduser("~")
+to_add = [
+    f"Bash({home}/.claude/skills/sv-card/scripts/card_helper.sh:*)",
+    f"Bash(python3 {home}/.claude/skills/sv-card/scripts/make_card_artifacts.py:*)",
+    f"Bash({home}/.claude/skills/sv-card/install.sh:*)",
+    f"Bash({home}/.claude/skills/sv-card/scripts/setup-mcp.sh:*)",
+    "mcp__illustrator__run",
+]
+added = []
+for rule in to_add:
+    if rule not in allow:
+        allow.append(rule)
+        added.append(rule)
+
+tmp = Path(str(path) + ".tmp")
+tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+tmp.replace(path)
+print(f"  ✅ 加入 {len(added)} 條規則")
+for r in added:
+    print(f"    + {r}")
+PYEOF
+else
+    echo "  → 跳過。日常每次做名片時會被 permission prompt 中斷"
+fi
+echo
+
+# ─── 5. 完成 ──────────────────────────────────────────────────
 mkdir -p "$out_base"
 echo "🎉 安裝完成！"
 echo
 echo "下一步："
 echo "  1. 確認 ~/.claude/skills/sv-card/SKILL.md 已可被 Claude Code 載入（重啟 Claude Code）"
 echo "  2. 在 Claude Code 中說「幫我做 SV 名片」+ 附簽呈 PDF 即可觸發"
-echo "  3. 若要改設定，編輯 $CONFIG_FILE"
+echo "     （首次製作時會引導您確認存放位置）"
+echo "  3. 若要改設定，編輯 ${CONFIG_FILE}"
 echo
 echo "目前生效值："
-echo "  SV_OUTPUT_BASE = $out_base"
-echo "  SV_TEMPLATE    = $tpl"
+echo "  SV_OUTPUT_BASE      = $out_base"
+echo "  SV_TEMPLATE         = $tpl"
+echo "  SV_OUTPUT_CONFIRMED = $confirmed (0=首次製作會引導確認，1=已確認)"
