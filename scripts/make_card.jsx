@@ -2,7 +2,7 @@
 // 透過設定 global var CARD_DATA = {...} 後再 evalFile 執行
 // 例:
 //   $.global.CARD_DATA = { chineseName: "王小明", englishName: "阿明 Ming Wang", title: "美術設計", extension: "#XXX", mobile: "0900-000-000", email: "mingwang@streetvoice.com" };
-//   $.evalFile("/Users/owner/mcp-servers/illustrator-mcp-server/scripts/make_card.jsx");
+//   $.evalFile(Folder("~").fsName + "/.claude/skills/sv-card/scripts/make_card.jsx");
 
 (function() {
     var d = app.activeDocument;

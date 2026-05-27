@@ -19,8 +19,19 @@
 
 set -e
 
-SV_TEMPLATE="/Users/owner/Claude_Owner/SV/1_名片/名片範例/一般名片/1_SV/20260522-王小明.ai"
-SV_OUTPUT_BASE="/Users/owner/Documents/02_街聲/6 名片/SV"
+# 載入使用者環境變數（install.sh 會寫入此檔）
+[ -f "$HOME/.config/sv-card/env" ] && . "$HOME/.config/sv-card/env"
+
+# 可由環境變數或 ~/.config/sv-card/env 覆寫
+SV_CARD_SKILL_DIR="${SV_CARD_SKILL_DIR:-$HOME/.claude/skills/sv-card}"
+SV_TEMPLATE="${SV_TEMPLATE:-$SV_CARD_SKILL_DIR/templates/20260522-王小明.ai}"
+SV_OUTPUT_BASE="${SV_OUTPUT_BASE:-$HOME/Documents/SV-名片}"
+
+if [ ! -f "$SV_TEMPLATE" ]; then
+    echo "ERROR: 找不到模板 .ai 檔: $SV_TEMPLATE" >&2
+    echo "  → 請執行 install.sh，或設定 SV_TEMPLATE 環境變數指向實際路徑" >&2
+    exit 1
+fi
 
 cmd="$1"
 shift || true
@@ -40,7 +51,7 @@ case "$cmd" in
         new_file="$dest_dir/${today}-${name_folder}.ai"
 
         mkdir -p "$dest_dir"
-        cp "$SV_TEMPLATE" "$new_file"
+        cp -L "$SV_TEMPLATE" "$new_file"
         echo "✅ 模板已複製: $new_file"
 
         if pgrep -x "Adobe Illustrator" > /dev/null; then

@@ -10,10 +10,13 @@ StreetVoice 名片 vCard 產生器
     - 從一個「樣板 vCard」抽取共用欄位（公司 logo PHOTO、FAX、地址、ORG、URL）
     - 套上個人化資料產生新 .vcf
 """
+import os
 from pathlib import Path
 
-# === 樣板 vCard：含公司 logo PHOTO 區塊（僅在 include_photo=True 時讀取，預設用不到）===
-TEMPLATE_VCF = Path("~/path/to/template.vcf").expanduser()
+# === 樣板 vCard：含公司 logo PHOTO 區塊（僅在 include_photo=True 時讀取）===
+# 預設 None 代表不嵌 PHOTO（macOS 通訊錄會自動依姓氏產字母頭貼，這是建議行為）。
+# 若要嵌入自訂 PHOTO，請設環境變數 SV_VCARD_TEMPLATE 指向樣板 .vcf
+TEMPLATE_VCF = Path(os.environ["SV_VCARD_TEMPLATE"]).expanduser() if os.environ.get("SV_VCARD_TEMPLATE") else None
 
 
 def extract_photo_block(template_path: Path) -> str:
@@ -80,7 +83,14 @@ def make_vcard(data: dict, output_path: Path, include_photo: bool = False):
 
     產出 vCard 後同時印出公司公開 URL，方便複製貼到 QR Code 產生器
     """
-    photo_block = extract_photo_block(TEMPLATE_VCF) if include_photo else ""
+    if include_photo:
+        if TEMPLATE_VCF is None:
+            raise RuntimeError(
+                "include_photo=True 但未設定 SV_VCARD_TEMPLATE 環境變數，請指向樣板 .vcf"
+            )
+        photo_block = extract_photo_block(TEMPLATE_VCF)
+    else:
+        photo_block = ""
     content = build_vcard(data, photo_block)
     output_path.write_text(content, encoding="utf-8")
     print(f"OK: 寫入 {output_path} ({output_path.stat().st_size} bytes)")

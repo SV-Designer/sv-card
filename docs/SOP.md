@@ -20,7 +20,7 @@
 Claude 自動依序：
 1. 讀取此 SOP
 2. 讀 PDF 萃取個人資料
-3. **在 `/Users/owner/Documents/02_街聲/6 名片/SV/` 下建立新資料夾**，命名格式：`{中文姓名}_{英文名}`（不含 alias）
+3. **在 `$SV_OUTPUT_BASE/` 下建立新資料夾**（預設 `~/Documents/SV-名片/`，可由 `~/.config/sv-card/env` 覆寫），命名格式：`{中文姓名}_{英文名}`（不含 alias）
    - 例如：簽呈姓名 `王小明` + 英文名 `阿明 Ming Wang` → 資料夾 `王小明_Ming Wang`
 4. **複製模板**並重新命名成 `{YYYYMMDD}-{中文姓名}_{英文名}.ai`
 5. **自動 `open` 開啟 Illustrator + 載入該檔案**
@@ -41,7 +41,7 @@ Claude 自動依序：
         ↓
 [我]  ③ 讀 PDF → 萃取 6 欄資料
         ↓
-[我]  ④ 在 ~/Documents/02_街聲/6 名片/SV/ 建立資料夾 + 複製模板 .ai
+[我]  ④ 在 $SV_OUTPUT_BASE/ 建立資料夾 + 複製模板 .ai
         ↓
 [我]  ⑤ 自動 `open -a "Adobe Illustrator" <new.ai>` + 輪詢直到 activeDocument 就緒
         ↓
@@ -66,7 +66,7 @@ Claude 自動依序：
 
 ### 模板物件命名（首次設定，已完成）
 
-模板位置：`/Users/owner/Claude_Owner/SV/1_名片/名片範例/一般名片/1_SV/20260522-王小明.ai`
+模板位置：`~/.claude/skills/sv-card/templates/20260522-王小明.ai`（install.sh 會 symlink 進去）
 
 7 個可編輯欄位都已用 `PH_` 前綴命名：
 
@@ -137,14 +137,14 @@ Claude 用 Read tool 讀 PDF，萃取：
 
 單一 Bash 指令完成 建資料夾 + 複製模板 + 開檔 + 輪詢：
 ```bash
-/Users/owner/mcp-servers/illustrator-mcp-server/scripts/card_helper.sh init "王小明" "Ming Wang"
+~/.claude/skills/sv-card/scripts/card_helper.sh init "王小明" "Ming Wang"
 ```
 
 **英文名取「去 alias」版本：** 若英文名是 `阿明 Ming Wang`，取 `Ming Wang`（規則：移除最前面的中文 alias 部分）
 
 腳本內部行為：
-1. `mkdir -p $SV_OUTPUT_BASE/{chinese}_{english}`
-2. `cp` 模板到該資料夾並重新命名為 `{YYYYMMDD}-{chinese}_{english}.ai`
+1. `mkdir -p $SV_OUTPUT_BASE/{chinese}_{english}`（路徑來自 `~/.config/sv-card/env` 或環境變數，預設 `~/Documents/SV-名片/`）
+2. `cp -L $SV_TEMPLATE` 到該資料夾並重新命名為 `{YYYYMMDD}-{chinese}_{english}.ai`（模板預設 `~/.claude/skills/sv-card/templates/20260522-王小明.ai`）
 3. `open -a "Adobe Illustrator" "$NEW_FILE"`
 4. 輪詢 osascript（最多 60 秒）直到 activeDocument 就緒
 5. 印出 `BASENAME=...` 和 `DEST_DIR=...` 供後續 Step 12 使用
@@ -182,12 +182,12 @@ app.activeDocument.save();
 
 單一 Bash 指令完成 vCard、QR SVG、預處理：
 ```bash
-python3 /Users/owner/mcp-servers/illustrator-mcp-server/scripts/make_card_artifacts.py \
-    --surname "陳" --given "紀雯" --en "Ming Wang" \
+python3 ~/.claude/skills/sv-card/scripts/make_card_artifacts.py \
+    --surname "王" --given "小明" --en "Ming Wang" \
     --title "美術設計" \
     --email "mingwang@streetvoice.com" \
     --mobile "+886 900 000 000" \
-    --folder "/Users/owner/Documents/02_街聲/6 名片/SV/王小明_Ming Wang" \
+    --folder "$DEST_DIR" \
     --vcf-name "MingWang.vcf"
 ```
 
@@ -197,7 +197,7 @@ python3 /Users/owner/mcp-servers/illustrator-mcp-server/scripts/make_card_artifa
 3. 預處理 SVG → `/tmp/qr_processed.svg`（剝 `id="bg"` 背景白底，供 place_qr.jsx 匯入）
 
 > 為什麼抽腳本：避免 inline python3 heredoc 每次都要審「看不懂的程式碼」。
-> settings.json 用 `Bash(python3 /Users/owner/mcp-servers/.../make_card_artifacts.py:*)` 精準允許這一個腳本路徑。
+> settings.json 用 `Bash(python3 ~/.claude/skills/sv-card/scripts/make_card_artifacts.py:*)` 精準允許這一個腳本路徑。
 
 > ⚠️ vCard URL 編碼進 QR 後，**.vcf 仍需使用者事後上傳到 drive.streetvoice.com/vcard/**，否則掃描會 404。腳本印出的 URL 是給使用者事後上傳對齊用。
 
@@ -210,7 +210,8 @@ $.global.QR_OPTS = {
     sizeCm: 1.4,
     cmykBlack: 88
 };
-$.evalFile("/Users/owner/mcp-servers/illustrator-mcp-server/scripts/place_qr.jsx");
+// Folder("~") 展開為家目錄，跨機器通用（ExtendScript 不支援 ~ 在字串字面值內展開）
+$.evalFile(Folder("~").fsName + "/.claude/skills/sv-card/scripts/place_qr.jsx");
 ```
 
 > 為什麼用 .jsx：避開 AppleScript 字串層轉義風險、便於版本管理、未來新名片款（中子/CN/EN）可直接重用。
@@ -239,7 +240,7 @@ app.activeDocument.save();
 
 ### Step 12：Claude 輸出 3 個檔案到新資料夾
 
-輸出資料夾：`~/Documents/02_街聲/6 名片/SV/{NAME_FOLDER}/`
+輸出資料夾：`$SV_OUTPUT_BASE/{NAME_FOLDER}/`（預設 `~/Documents/SV-名片/`）
 
 **12a. 清除殘留物**（重要！）：
 ```javascript
@@ -264,7 +265,7 @@ d.saveAs(new File("/tmp/output_original.ai"), opts);
 
 Bash 一行搞定 mv + 匯 JPG：
 ```bash
-/Users/owner/mcp-servers/illustrator-mcp-server/scripts/card_helper.sh save-original \
+~/.claude/skills/sv-card/scripts/card_helper.sh save-original \
     "$DEST_DIR" "$BASENAME"
 ```
 > `$DEST_DIR` 和 `$BASENAME` 是 Step 3 init 印出的；BASENAME 例：`20260527-王小明_Ming Wang`
@@ -283,7 +284,7 @@ d.saveAs(new File("/tmp/output_ol.ai"), opts);
 
 Bash 搬 OL：
 ```bash
-/Users/owner/mcp-servers/illustrator-mcp-server/scripts/card_helper.sh save-ol \
+~/.claude/skills/sv-card/scripts/card_helper.sh save-ol \
     "$DEST_DIR" "$BASENAME"
 ```
 
@@ -300,7 +301,7 @@ Bash 搬 OL：
 **症狀：** osascript 報 -1712，但檔案實際被建立
 **原因：** AppleScript 預設 60 秒 timeout，大檔存檔超過
 **解法：** MCP server 已加 `with timeout of 600 seconds`。即使看到 -1712，先 `ls` 檢查 /tmp 檔，通常有產出
-**位置：** `/Users/owner/mcp-servers/illustrator-mcp-server/src/illustrator/server.py`
+**位置：** illustrator-mcp-server repo 內 `src/illustrator/server.py`（fork 自 spencerhhubert/illustrator-mcp-server）
 
 ### 3. `ExportOptionsJPEG` 不寫檔
 **症狀：** `exportFile()` 回傳成功但 JPG 不出現
@@ -348,15 +349,15 @@ Bash 搬 OL：
 
 | 用途 | 路徑 |
 |---|---|
-| 模板 .ai（已含 `PH_QRCODE` 命名）| `/Users/owner/Claude_Owner/SV/1_名片/名片範例/一般名片/1_SV/20260522-王小明.ai` |
-| vCard 產生器 | `/Users/owner/mcp-servers/illustrator-mcp-server/scripts/make_vcard.py` |
-| **QR Code 產生器**（取代 qrcode-monkey）| `/Users/owner/mcp-servers/illustrator-mcp-server/scripts/make_qr.py` |
-| **Artifacts 合併腳本**（Step 8+9+10a，CLI 介面）| `/Users/owner/mcp-servers/illustrator-mcp-server/scripts/make_card_artifacts.py` |
-| **Bash 操作合集**（Step 3+4+5 init / Step 12 save）| `/Users/owner/mcp-servers/illustrator-mcp-server/scripts/card_helper.sh` |
-| **QR 置入 + 染色 jsx**（Step 10 主邏輯）| `/Users/owner/mcp-servers/illustrator-mcp-server/scripts/place_qr.jsx` |
-| 名片替換 jsx（舊版，已被 PH_ 命名替代）| `/Users/owner/mcp-servers/illustrator-mcp-server/scripts/make_card.jsx` |
-| Illustrator MCP server | `/Users/owner/mcp-servers/illustrator-mcp-server/` |
-| 已修改的 server.py | 同上 `src/illustrator/server.py`（去掉 Claude activate、加長 timeout）|
+| 模板 .ai（已含 `PH_QRCODE` 命名）| `~/.claude/skills/sv-card/templates/20260522-王小明.ai` |
+| vCard 產生器 | `~/.claude/skills/sv-card/scripts/make_vcard.py` |
+| **QR Code 產生器**（取代 qrcode-monkey）| `~/.claude/skills/sv-card/scripts/make_qr.py` |
+| **Artifacts 合併腳本**（Step 8+9+10a，CLI 介面）| `~/.claude/skills/sv-card/scripts/make_card_artifacts.py` |
+| **Bash 操作合集**（Step 3+4+5 init / Step 12 save）| `~/.claude/skills/sv-card/scripts/card_helper.sh` |
+| **QR 置入 + 染色 jsx**（Step 10 主邏輯）| `~/.claude/skills/sv-card/scripts/place_qr.jsx` |
+| 名片替換 jsx（舊版，已被 PH_ 命名替代）| `~/.claude/skills/sv-card/scripts/make_card.jsx` |
+| Illustrator MCP server | 由使用者另行安裝（fork: spencerhhubert/illustrator-mcp-server，需去掉 Claude activate、加長 timeout）|
+| 使用者偏好設定 | `~/.config/sv-card/env`（install.sh 寫入；可覆寫 SV_OUTPUT_BASE、SV_TEMPLATE）|
 
 ---
 

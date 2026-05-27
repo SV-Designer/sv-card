@@ -6,7 +6,7 @@
 //       sizeCm: 1.4,                         // 目標尺寸（cm）
 //       cmykBlack: 88                        // K 值 (0~100)；C/M/Y 強制為 0
 //   };
-//   $.evalFile("/Users/owner/mcp-servers/illustrator-mcp-server/scripts/place_qr.jsx");
+//   $.evalFile(Folder("~").fsName + "/.claude/skills/sv-card/scripts/place_qr.jsx");
 //
 // 前置條件：活動文件中必須有命名為 "PH_QRCODE" 的 placeholder（GroupItem / PathItem / 任意 PageItem 皆可）
 //

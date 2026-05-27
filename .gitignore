@@ -3,3 +3,13 @@
 *.swp
 .idea/
 .vscode/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# 使用者本地設定（不應 commit）
+.env
+.env.local
