@@ -265,26 +265,37 @@ PYEOF
 
         echo "📤 上傳目標：ftp://${user}@${host}${remote_dir}/"
 
-        # 從 Keychain 拿密碼
-        password=$(security find-internet-password -s "$host" -a "$user" -l "$kc_label" -w 2>/dev/null || true)
-
-        if [ -z "$password" ]; then
-            # 首次：透過 osascript dialog 跟使用者要密碼
-            echo "🔐 首次上傳，請在 dialog 輸入密碼（會存到 macOS Keychain，下次靜默使用）"
-            password=$(osascript <<APPLESCRIPT 2>/dev/null || true
+        # ---- 密碼 dialog（首次 / 重輸共用）----
+        prompt_password() {
+            local title="$1"
+            local prompt_text="$2"
+            osascript <<APPLESCRIPT 2>/dev/null || true
 try
-    set p to text returned of (display dialog "請輸入 Transmit favorite「${fav_name}」的 FTP 密碼
+    set p to text returned of (display dialog "${prompt_text}
 
 host: ${host}
 user: ${user}
 
-密碼會存到 macOS Keychain，下次不再詢問。" with title "sv-card 首次上傳設定" default answer "" with hidden answer)
+密碼會存到 macOS Keychain，下次不再詢問。" with title "${title}" default answer "" with hidden answer)
     return p
 on error
     return ""
 end try
 APPLESCRIPT
-)
+        }
+
+        # ---- preflight 測登入（curl noop list）----
+        # 0 = OK；67 = auth 失敗（密碼錯）；其他 = 連線/server 問題
+        preflight_login() {
+            curl -sS -fS --connect-timeout 10 --user "${user}:${password}" \
+                 --list-only "ftp://${host}${remote_dir}/" > /dev/null 2>&1
+        }
+
+        # 第一階段：拿密碼（Keychain 有就用，沒有就跳 dialog）
+        password=$(security find-internet-password -s "$host" -a "$user" -l "$kc_label" -w 2>/dev/null || true)
+        if [ -z "$password" ]; then
+            echo "🔐 首次上傳，請在 dialog 輸入密碼"
+            password=$(prompt_password "sv-card 首次上傳設定" "請輸入 Transmit favorite「${fav_name}」的 FTP 密碼")
             if [ -z "$password" ]; then
                 echo "❌ 使用者取消輸入密碼" >&2
                 exit 1
@@ -292,6 +303,28 @@ APPLESCRIPT
             security add-internet-password -s "$host" -a "$user" -l "$kc_label" -w "$password" -U
             echo "✅ 密碼已存入 macOS Keychain（label：${kc_label}）"
         fi
+
+        # 第二階段：preflight 驗證登入；失敗則引導重輸密碼一次
+        echo "🔍 檢查登入狀態..."
+        if ! preflight_login; then
+            preflight_exit=$?
+            echo "🔐 登入失敗（curl exit ${preflight_exit}），可能密碼錯誤或已變更。請重新輸入。"
+            security delete-internet-password -s "$host" -a "$user" -l "$kc_label" 2>/dev/null || true
+            password=$(prompt_password "sv-card 重新登入" "登入失敗，請重新輸入 Transmit favorite「${fav_name}」的 FTP 密碼")
+            if [ -z "$password" ]; then
+                echo "❌ 使用者取消輸入密碼" >&2
+                exit 1
+            fi
+            security add-internet-password -s "$host" -a "$user" -l "$kc_label" -w "$password" -U
+            if ! preflight_login; then
+                preflight_exit=$?
+                echo "❌ 登入仍失敗（curl exit ${preflight_exit}）" >&2
+                echo "  → 可能原因：密碼錯誤、帳號未開通 ${remote_dir}/ 寫權限、或網路問題" >&2
+                echo "  → 請截圖 slack 洽產品工程部協助確認帳號權限" >&2
+                exit 1
+            fi
+        fi
+        echo "✅ 登入 ${host} 成功"
 
         vcf_basename=$(basename "$vcf")
 
@@ -316,13 +349,15 @@ APPLESCRIPT
             echo "📋 公開 URL：http://${host}${remote_dir}/${vcf_basename}"
         else
             curl_exit=$?
+            # 登入已 preflight 通過，這裡的失敗純粹是檔案層級權限問題
             if [ "$existed_before" = "1" ]; then
-                echo "❌ 目前您的 Server 權限無法覆蓋原檔，請洽資訊部同仁。" >&2
-                echo "  → 對應檔案：${vcf_basename}（server 上已存在但 owner 非當前帳號 ${user}）" >&2
+                echo "❌ 該檔案未開放編輯權限，無法覆蓋。" >&2
+                echo "  → 對應檔案：${vcf_basename}" >&2
+                echo "  → 請截圖 slack 洽產品工程部協助開放該檔案的編輯權限" >&2
             else
-                echo "❌ 上傳失敗（curl exit ${curl_exit}）" >&2
-                echo "  → 若密碼錯誤，請執行：security delete-internet-password -s \"${host}\" -a \"${user}\" -l \"${kc_label}\"" >&2
-                echo "  → 然後重跑 upload-vcard 會再次 prompt 密碼" >&2
+                echo "❌ 上傳失敗（curl exit ${curl_exit}），登入已驗證 OK 故非密碼問題。" >&2
+                echo "  → 對應檔案：${vcf_basename}（新檔）" >&2
+                echo "  → 請截圖 slack 洽產品工程部協助確認 ${remote_dir}/ 目錄寫權限" >&2
             fi
             exit 1
         fi

@@ -6,6 +6,27 @@
 
 ## [Unreleased]
 
+## [0.7.2] — 2026-05-28
+
+### Added
+- **`upload-vcard` 加入 preflight 登入檢查**：在實際 STOR 之前先用 `curl --list-only` 對 `${remote_dir}/` 做 noop 連線測試，把「登入失敗」與「上傳失敗」徹底切開：
+  - preflight 失敗 → 訊息：登入失敗 → 自動刪 Keychain 密碼 → 跳 dialog 重輸 → 再 preflight 一次
+  - 第二次仍失敗 → 訊息：「可能密碼錯誤、帳號未開通寫權限、或網路問題，請洽產品工程部」
+  - 通過 → 印 `✅ 登入 ${host} 成功` → 才進入正式上傳
+- 首次使用者與已有 Keychain 密碼的使用者走同一條 preflight 路徑，UX 一致
+
+### Changed
+- `upload-vcard` 上傳階段的失敗訊息簡化：因為登入已 preflight 通過，STOR 失敗就**純粹**是檔案層級權限問題，不再需要「可能是密碼錯」的分支誤導
+  - `existed_before=1`：「該檔案未開放編輯權限」
+  - `existed_before=0`：「新檔上傳失敗，登入已驗證 OK 故非密碼問題，請洽產品工程部確認目錄寫權限」
+
+### Fixed
+- `upload-vcard` 的 FTP 550 失敗訊息**移除錯誤的 owner 假設**。v0.7.1 把「existed_before=1 + 上傳失敗」直接斷言成「owner 非當前帳號」，但實測證明這個假設錯了 — server 上的 vcard 可由非 owner 編輯（只要該檔有被開放編輯權限），決定權在「檔案是否被開放編輯」而非 owner
+
+### Rationale
+- 把 script 的「設計時假設」當「事實」寫進錯誤訊息會誤導使用者方向（白跑去問 owner 權限，但真因是檔案 ACL）。修正後框架對齊真實的 FTP 權限模型 — 是檔案層級的編輯權限，不是 owner 身份
+- preflight 切開「登入」與「上傳」兩個失敗類別，新人交接情境最痛的「混在 STOR 失敗裡的密碼錯誤」終結 — 不會再卡在「刪密碼→重輸→再失敗→懷疑人生」迴圈
+
 ## [0.7.1] — 2026-05-28
 
 ### Changed
