@@ -30,6 +30,11 @@
 #       GATE 後一次收尾：搬 original + JPG + 搬 OL + 列產出
 #       （等同 save-original 再 save-ol，配合 finalize.jsx 使用）
 #
+#   card_helper.sh upload-vcard <vcf-path>
+#       透過 curl + FTP 上傳 vcf 到 Transmit favorite「Streetvoice」對應 server 的 /vcard/。
+#       host/user 從 Transmit favorite 動態讀，密碼存 macOS Keychain（首次跑會 prompt）。
+#       FTP STOR 預設覆蓋同名檔。
+#
 # basename 格式範例：20260527-王小明_Ming Wang
 # dest-folder 格式範例：~/Documents/SV-名片/王小明_Ming Wang
 # sidecar 路徑：/tmp/sv_card_fields.json
@@ -239,6 +244,84 @@ PYEOF
         ls -la "$dest/"
         ;;
 
+    upload-vcard)
+        vcf="$1"
+        if [ -z "$vcf" ] || [ ! -f "$vcf" ]; then
+            echo "ERROR: upload-vcard 需要 <vcf-path>（檔案需存在）" >&2
+            exit 1
+        fi
+
+        fav_name="${SV_TRANSMIT_FAVORITE:-Streetvoice}"
+        remote_dir="${SV_TRANSMIT_REMOTE_DIR:-/vcard}"
+        kc_label="sv-card upload (${fav_name})"
+
+        # 從 Transmit favorite 動態讀 host + user（不寫死，跨同事通用）
+        host=$(osascript -e "tell application \"Transmit\" to return address of (first favorite whose name is \"${fav_name}\")" 2>/dev/null || true)
+        user=$(osascript -e "tell application \"Transmit\" to return user name of (first favorite whose name is \"${fav_name}\")" 2>/dev/null || true)
+        if [ -z "$host" ] || [ -z "$user" ]; then
+            echo "ERROR: 找不到 Transmit favorite \"${fav_name}\"（需先在 Transmit 內建好同名 favorite）" >&2
+            exit 1
+        fi
+
+        echo "📤 上傳目標：ftp://${user}@${host}${remote_dir}/"
+
+        # 從 Keychain 拿密碼
+        password=$(security find-internet-password -s "$host" -a "$user" -l "$kc_label" -w 2>/dev/null || true)
+
+        if [ -z "$password" ]; then
+            # 首次：透過 osascript dialog 跟使用者要密碼
+            echo "🔐 首次上傳，請在 dialog 輸入密碼（會存到 macOS Keychain，下次靜默使用）"
+            password=$(osascript <<APPLESCRIPT 2>/dev/null || true
+try
+    set p to text returned of (display dialog "請輸入 Transmit favorite「${fav_name}」的 FTP 密碼
+
+host: ${host}
+user: ${user}
+
+密碼會存到 macOS Keychain，下次不再詢問。" with title "sv-card 首次上傳設定" default answer "" with hidden answer)
+    return p
+on error
+    return ""
+end try
+APPLESCRIPT
+)
+            if [ -z "$password" ]; then
+                echo "❌ 使用者取消輸入密碼" >&2
+                exit 1
+            fi
+            security add-internet-password -s "$host" -a "$user" -l "$kc_label" -w "$password" -U
+            echo "✅ 密碼已存入 macOS Keychain（label：${kc_label}）"
+        fi
+
+        vcf_basename=$(basename "$vcf")
+
+        # 上傳前先查 server 是否已有同名檔（區分「新上傳」vs「覆蓋舊檔」）
+        existed_before=0
+        if curl -sS --list-only "ftp://${host}${remote_dir}/" --user "${user}:${password}" 2>/dev/null \
+               | grep -qFx "$vcf_basename"; then
+            existed_before=1
+        fi
+
+        # curl 上傳（FTP STOR 預設覆蓋同名檔）
+        echo "📤 curl 上傳：$vcf_basename"
+        if curl -sS -fS --ftp-create-dirs \
+                --upload-file "$vcf" \
+                "ftp://${host}${remote_dir}/${vcf_basename}" \
+                --user "${user}:${password}"; then
+            if [ "$existed_before" = "1" ]; then
+                echo "✅ vCard 已上傳 server 並覆蓋舊檔"
+            else
+                echo "✅ vCard 已上傳 server"
+            fi
+            echo "📋 公開 URL：http://${host}${remote_dir}/${vcf_basename}"
+        else
+            echo "❌ 上傳失敗（curl exit $?）" >&2
+            echo "  → 若密碼錯誤，請執行：security delete-internet-password -s \"${host}\" -a \"${user}\" -l \"${kc_label}\"" >&2
+            echo "  → 然後重跑 upload-vcard 會再次 prompt 密碼" >&2
+            exit 1
+        fi
+        ;;
+
     finalize)
         # GATE 後合併收尾：等同 save-original 後接 save-ol
         # 配合 finalize.jsx 使用（jsx 已產出 /tmp/output_original.ai + /tmp/output_ol.ai）
@@ -275,6 +358,7 @@ PYEOF
         echo "  $0 save-original <dest-folder> <basename>" >&2
         echo "  $0 save-ol <dest-folder> <basename>" >&2
         echo "  $0 finalize <dest-folder> <basename>" >&2
+        echo "  $0 upload-vcard <vcf-path>" >&2
         exit 1
         ;;
 esac

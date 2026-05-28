@@ -56,6 +56,8 @@ Claude 自動依序：
 [你]  ⑩ 切到 Illustrator 目視檢查 → 回覆 OK
         ↓
 [我]  ⑪ 清殘留 → 重存原檔（saveAs /tmp → mv）→ 匯出 JPG → 外框化 → 存 OL CS6
+        ↓
+[我]  ⑫ 上傳 vCard 到 drive.streetvoice.com/vcard/（FTP 自動覆蓋同名檔）
 ```
 
 > 💡 在 Step 9 GATE 時：使用者切去 Illustrator 看到的就是「替換 + QR 置入後的最新狀態」（Step 8 已 save 進資料夾）。確認 OK 後再產出最終交付檔。
@@ -198,7 +200,7 @@ replace_fields.jsx 內部行為：
 >
 > 向後相容：`card_helper.sh artifacts --surname ... --given ...` 命名參數模式仍可用。
 
-> ⚠️ vCard URL 編碼進 QR 後，**.vcf 仍需使用者事後上傳到 drive.streetvoice.com/vcard/**，否則掃描會 404。腳本印出的 URL 是給使用者事後上傳對齊用。
+> Step 9 `upload-vcard` 子命令會自動把產出的 vcf 上傳到 server（透過 curl + FTP），所以掃描 QR 不會 404。詳見 Step 13。
 
 ### Step 10：呼叫 `place_qr.jsx`
 
@@ -268,6 +270,28 @@ finalize.jsx 內部行為：
 
 > 為什麼合併：原本 GATE 後是 4 個 tool call 交替（mcp→bash→mcp→bash），合併後變 2 個（mcp→bash），且 Claude 不用記中間步驟順序。
 
+### Step 13：上傳 vCard 到 server（呼叫 `card_helper.sh upload-vcard`）
+
+```bash
+~/.claude/skills/sv-card/scripts/card_helper.sh upload-vcard "$DEST_DIR/{無空格英文名}.vcf"
+```
+
+子命令內部：
+1. 從 Transmit favorite「Streetvoice」（可由 `SV_TRANSMIT_FAVORITE` 環境變數覆寫）動態讀 host + user — 跨同事通用，不寫死
+2. 從 macOS Keychain（label：`sv-card upload (Streetvoice)`）取密碼；找不到就跳 `osascript display dialog` 跟使用者要，存進 Keychain（之後永久靜默）
+3. 用 `curl --list-only` 先查 server 是否已有同名檔，記 `existed_before`
+4. `curl --upload-file ... ftp://...` 上傳（FTP STOR 預設覆蓋同名檔）
+5. 根據 `existed_before` 印兩種訊息擇一：
+   - 新檔：`✅ vCard 已上傳 server`
+   - 覆蓋：`✅ vCard 已上傳 server 並覆蓋舊檔`
+6. 印出公開 URL（`http://drive.streetvoice.com/vcard/{vcf}`）
+
+> 為什麼不直接用 Transmit AppleScript：Transmit 5 字典中 `connect to favorite` 在 `tell document` scope 內反覆失敗（試了 6+ 個 syntax 變體），改用「Transmit favorite 動態查 host/user + macOS Keychain 存密碼 + curl FTP」更簡單可靠，且密碼完全不在 skill repo 內。
+
+> ⚠️ 第一次跑會跳 macOS Keychain 對話框「需要使用 Keychain」— 按「Always Allow」之後永久靜默。
+
+> ⚠️ 若改過密碼導致上傳 401：執行 `security delete-internet-password -s drive.streetvoice.com -a owner -l "sv-card upload (Streetvoice)"`，下次跑 upload-vcard 會再 prompt 新密碼。
+
 ---
 
 ## ⚠️ 已知問題與解法
@@ -333,7 +357,7 @@ finalize.jsx 內部行為：
 | vCard 產生器 | `~/.claude/skills/sv-card/scripts/make_vcard.py` |
 | **QR Code 產生器**（取代 qrcode-monkey）| `~/.claude/skills/sv-card/scripts/make_qr.py` |
 | **Artifacts 合併腳本**（Step 8+9+10a，CLI 介面）| `~/.claude/skills/sv-card/scripts/make_card_artifacts.py` |
-| **Bash 操作合集**（init / save / finalize）| `~/.claude/skills/sv-card/scripts/card_helper.sh` |
+| **Bash 操作合集**（init / save / finalize / upload-vcard）| `~/.claude/skills/sv-card/scripts/card_helper.sh` |
 | **欄位替換 jsx**（Step 6+7 合併）| `~/.claude/skills/sv-card/scripts/replace_fields.jsx` |
 | **QR 置入 + 染色 jsx**（Step 10 主邏輯）| `~/.claude/skills/sv-card/scripts/place_qr.jsx` |
 | **GATE 後合併收尾 jsx**（Step 12a）| `~/.claude/skills/sv-card/scripts/finalize.jsx` |

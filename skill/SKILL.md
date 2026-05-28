@@ -133,6 +133,20 @@ $.evalFile(Folder("~").fsName + "/.claude/skills/sv-card/scripts/finalize.jsx");
 ```
 （finalize 內部：mv original + sips JPG + mv OL + `ls -la` 列 5 個交付檔）
 
+### Step 9：上傳 vCard 到 drive.streetvoice.com/vcard/
+```bash
+~/.claude/skills/sv-card/scripts/card_helper.sh upload-vcard "$DEST_DIR/<無空格英文名>.vcf"
+```
+> 透過 curl + FTP 上傳到 Transmit favorite「Streetvoice」對應 server。
+>
+> 首次跑：跳 dialog 要密碼 → 存 macOS Keychain（之後永久靜默）。
+>
+> 子命令會印兩種訊息擇一：
+> - `✅ vCard 已上傳 server`（新檔）
+> - `✅ vCard 已上傳 server 並覆蓋舊檔`（重做名片時 FTP STOR 自動 overwrite）
+>
+> Claude 收尾時請把這行訊息 + 公開 URL 一併報告給使用者。
+
 ## 📂 最終產出
 
 `$SV_OUTPUT_BASE/{中文姓名}_{英文名去alias}/`（預設 `~/Documents/SV-名片/`）內 5 個檔案：
@@ -142,10 +156,10 @@ $.evalFile(Folder("~").fsName + "/.claude/skills/sv-card/scripts/finalize.jsx");
 | `{YYYYMMDD}-{中文名}_{英文名}.ai` | 原檔（可編輯）|
 | `OL-{YYYYMMDD}-{中文名}_{英文名}.ai` | OL CS6（送印）|
 | `{YYYYMMDD}-{中文名}_{英文名}.jpg` | 預覽 2000×780 |
-| `{無空格英文名}.vcf` | vCard — **請使用者事後上傳到 `drive.streetvoice.com/vcard/`** |
+| `{無空格英文名}.vcf` | vCard — Step 9 已自動上傳到 `drive.streetvoice.com/vcard/`（覆蓋同名舊檔）|
 | `QR Code.svg` | QR 原檔 |
 
-> 收尾時記得告訴使用者：`📋 vCard URL: http://drive.streetvoice.com/vcard/{vcf 檔名}`
+> Step 9 upload-vcard 已自動印出「vCard 已上傳 server [並覆蓋舊檔]」+ 公開 URL，收尾時把這兩行轉達給使用者即可。
 
 ## ⚠️ 關鍵注意事項
 

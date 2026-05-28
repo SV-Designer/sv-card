@@ -6,6 +6,33 @@
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-05-28
+
+### Added
+- **`card_helper.sh upload-vcard <vcf-path>` 子命令**：自動把 vCard 上傳到 `drive.streetvoice.com/vcard/`，完成「名片→vCard→QR→上傳」全鏈閉環。
+  - host / user 從 Transmit favorite「Streetvoice」（可由 `SV_TRANSMIT_FAVORITE` env 覆寫）動態 query，跨同事通用不寫死
+  - 密碼存 macOS Keychain（label：`sv-card upload (Streetvoice)`），首次跑透過 osascript dialog 跟使用者要密碼後存入，之後永久靜默重用
+  - 用 `curl --list-only` 先查 server 是否已有同名檔，據此印兩種訊息擇一：
+    - `✅ vCard 已上傳 server`（新檔）
+    - `✅ vCard 已上傳 server 並覆蓋舊檔`（FTP STOR 自動 overwrite）
+  - 上傳完印公開 URL `http://drive.streetvoice.com/vcard/{vcf}`
+- **SKILL.md Step 9 + SOP.md Step 13**：把 upload-vcard 加進流程；流程圖第 ⑫ 步補上「上傳 vCard」
+
+### Changed
+- SKILL.md「最終產出」表格的 vcf 描述從「請使用者事後上傳」改為「Step 9 已自動上傳」
+- SOP.md 收尾說明從「掃 QR 會 404，需事後上傳」改為「Step 13 自動上傳，QR 可直接掃」
+
+### Rationale
+- vCard 上傳是流程內最後一個「使用者手動環節」（在 Transmit 拖檔），自動化後整套名片製作從 PDF → 5 個交付檔 → server 全閉環
+- 密碼處理方式（macOS Keychain + 首次 prompt）滿足「不寫進 repo + 跨同事通用」雙條件：repo 內零密碼，每個同事第一次跑時自己輸入存進各自的 Keychain
+- 不走 Transmit AppleScript 路線：Transmit 5.9.1 字典中 `connect to favorite` 在 `tell document` scope 反覆失敗（試 6+ 個 syntax 變體），改用「Transmit favorite 動態查 + curl FTP」更直接可靠
+
+### Testing
+- 對 ~/Documents/SV-名片/MingWang.vcf 連跑兩次：
+  1. 第一次：osascript 跳 dialog 拿密碼 → 存 Keychain → 上傳成功
+  2. 第二次：Keychain 靜默取密碼 → 上傳並覆蓋舊檔，訊息分流正確
+- 順便修 `$kc_label）` 全形括號吃 byte 顯示亂碼（同 v0.3.0 修過的 `${VAR}` 顯式語法 bug 復發）
+
 ## [0.6.0] — 2026-05-27
 
 ### Added
