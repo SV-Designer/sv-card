@@ -1,6 +1,6 @@
 ---
 name: sv-card
-description: StreetVoice 街聲名片自動化製作。觸發條件 = 使用者說「我要製作名片」或「做 SV 名片」或「幫我做 SV 名片」並提供簽呈 PDF。產出 5 個交付檔案（原檔 .ai / OL CS6 / JPG 預覽 2000×780 / vCard / QR SVG）到 $SV_OUTPUT_BASE/{中文姓名}_{英文名去 alias}/（預設 ~/Documents/SV-名片，可由 ~/.config/sv-card/env 覆寫）。整套流程封裝為 3 個腳本（card_helper.sh / make_card_artifacts.py / place_qr.jsx），全程零 Bash prompt，唯一停下來的點是 Step 6 的 GATE「請確認資訊無誤」。詳細 SOP 與已知問題見 ~/.claude/skills/sv-card/docs/SOP.md。
+description: StreetVoice 街聲名片自動化製作（TW 街聲版）。觸發詞：「做 SV 名片」/「我要製作名片」/「幫我做 SV 名片」/「執行 SV_名片自動化製作」，並附簽呈 PDF（拖入或路徑）。子品牌（中子 / CN / EN 版）尚未支援；遇非常規簽呈（外部夥伴改名、無分機、非 streetvoice.com email、非 TW 街聲版型）需先停下與使用者確認，不直接走自動流程。
 ---
 
 # SV 名片自動化製作

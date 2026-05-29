@@ -17,6 +17,7 @@
 - `.github/workflows/ci.yml`：GitHub Actions 在 push 到 main / PR 時自動跑 smoke.sh（Ubuntu runner，自動裝 shellcheck + jsonschema）
 
 ### Changed
+- SKILL.md description 精簡 50%（393 → 193 字元）：移除執行細節（輸出檔案清單、路徑與環境變數覆寫、3 個腳本封裝、零 Bash prompt、GATE 細節、SOP 連結），只保留 trigger 判斷需要的資訊：定位 + 4 個觸發詞 + 必要輸入（簽呈 PDF）+ 不適用場景（子品牌、非常規簽呈）。Claude Code 在 available-skills 列表用 description 判斷觸發，太長會稀釋訊號
 - SKILL.md Step 9 同步 v0.7.2 內部流程：列出 preflight 登入檢查流程、4 種可能結果訊息（成功 / 登入失敗 / 檔案無編輯權限 / 目錄寫權限不足）讓 Claude 能正確轉達
 
 ## [0.7.2] — 2026-05-28
