@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "sv-card sidecar",
+  "description": "由 card_helper.sh init 寫入 /tmp/sv_card_fields.json 的結構規範",
+  "type": "object",
+  "required": ["fields", "artifacts"],
+  "additionalProperties": false,
+  "properties": {
+    "fields": {
+      "type": "object",
+      "description": "Step 2 replace_fields.jsx 替換到 .ai 的 7 個 PH_* 欄位",
+      "required": [
+        "PH_NAME_CN_SURNAME",
+        "PH_NAME_CN_GIVEN",
+        "PH_NAME_EN",
+        "PH_TITLE",
+        "PH_PHONE_OFFICE",
+        "PH_PHONE_MOBILE",
+        "PH_EMAIL"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "PH_NAME_CN_SURNAME": {"type": "string", "minLength": 1},
+        "PH_NAME_CN_GIVEN":   {"type": "string", "minLength": 1},
+        "PH_NAME_EN":         {"type": "string", "minLength": 1},
+        "PH_TITLE":           {"type": "string", "minLength": 1},
+        "PH_PHONE_OFFICE":    {"type": "string", "pattern": "^\\+886-2-2741-7065(#\\d+)?$"},
+        "PH_PHONE_MOBILE":    {"type": "string", "pattern": "^\\+886-\\d{3}-\\d{3}-\\d{3,4}$"},
+        "PH_EMAIL":           {"type": "string", "format": "email"}
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "description": "Step 3 make_card_artifacts.py 產 vCard + QR 的欄位",
+      "required": ["surname", "given", "en", "title", "email", "mobile", "folder", "vcf_name"],
+      "additionalProperties": false,
+      "properties": {
+        "surname":  {"type": "string", "minLength": 1},
+        "given":    {"type": "string", "minLength": 1},
+        "en":       {"type": "string", "minLength": 1},
+        "title":    {"type": "string", "minLength": 1},
+        "email":    {"type": "string", "format": "email"},
+        "mobile":   {"type": "string", "description": "簽呈原格式，例如 +886 909 050 269"},
+        "folder":   {"type": "string", "description": "輸出資料夾絕對路徑"},
+        "vcf_name": {"type": "string", "pattern": "^[A-Za-z]+\\.vcf$", "description": "無空格英文名 + .vcf"}
+      }
+    }
+  }
+}

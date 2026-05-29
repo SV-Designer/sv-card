@@ -175,6 +175,17 @@ SV_TRANSMIT_REMOTE_DIR="/vcard"
 - 執行手冊（精簡）：[`skill/SKILL.md`](skill/SKILL.md)
 - 完整 SOP（含已知問題深度說明）：[`docs/SOP.md`](docs/SOP.md)
 - 變更紀錄：[`CHANGELOG.md`](CHANGELOG.md)
+- 測試說明：[`tests/README.md`](tests/README.md)
+
+## 測試
+
+煙霧測試（不需 Illustrator、不需 FTP）：
+
+```bash
+bash tests/smoke.sh
+```
+
+每次 push 到 `main` 或 PR 時，GitHub Actions 也會自動跑（見 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)）。詳見 [`tests/README.md`](tests/README.md)。
 
 ## 已知限制
 

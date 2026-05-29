@@ -6,6 +6,16 @@
 
 ## [Unreleased]
 
+### Added
+- `tests/smoke.sh`：本地或 CI 都可跑的煙霧測試。4 個 phase：bash -n（必跑）、shellcheck（可選）、python py_compile（必跑）、sidecar JSON schema 驗證（可選）。「可選」項本地未裝套件不會擋你跑，CI 上會自動裝
+- `tests/sidecar_schema.json`：sidecar `/tmp/sv_card_fields.json` 結構規範（JSON Schema draft-07）。明確規範 `fields` 7 個 PH_* 欄位 + `artifacts` 8 個欄位的 type / pattern / required
+- `tests/validate_sidecar.py`：跑 schema validation 對 fixtures。負面樣本（檔名含 `_invalid_`）會被預期應該失敗
+- `tests/fixtures/sidecar_valid.json`：valid sidecar 樣本（王小明假名）
+- `tests/fixtures/sidecar_invalid_missing_field.json`：缺 PH_EMAIL 欄位的負面樣本
+- `tests/fixtures/sidecar_invalid_bad_phone.json`：電話格式不符合規範的負面樣本
+- `tests/README.md`：測試範圍、跑法、擴充指南
+- `.github/workflows/ci.yml`：GitHub Actions 在 push 到 main / PR 時自動跑 smoke.sh（Ubuntu runner，自動裝 shellcheck + jsonschema）
+
 ### Changed
 - SKILL.md Step 9 同步 v0.7.2 內部流程：列出 preflight 登入檢查流程、4 種可能結果訊息（成功 / 登入失敗 / 檔案無編輯權限 / 目錄寫權限不足）讓 Claude 能正確轉達
 
