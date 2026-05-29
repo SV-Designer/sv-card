@@ -6,6 +6,20 @@
 
 ## [Unreleased]
 
+## [0.8.2] — 2026-05-29
+
+### Added
+- **`upload-vcard --check-only` flag**：只做「拿密碼 + preflight + 查 server」，不上傳。最後一行印 `exists` 或 `new` 並 exit 0，供 SKILL.md Step 9a 預檢
+- **Step 9 拆三步**：9a 預查 → 9b GATE（僅 `exists` 觸發）→ 9c 上傳
+  - 9b GATE 規則：Claude 用「**`<vcf 檔名>` 偵測到相同檔案，請問是否覆蓋？**」問使用者；OK 才進 9c
+  - 使用者回否定 → 跳過 Step 9（vcf 仍在本地，未來可手動跑上傳）
+  - 防止不知不覺覆寫掉 server 上 owner 是別人的舊 vcf（直接覆蓋可能是預期行為，但 v0.8.2 之後要明確同意）
+
+### Changed
+- SKILL.md Step 9 重寫為三步流程，「可能印出的結果訊息」同步 v0.8.1（移除誤判的「檔案未開放編輯權限」分類，改為「STOR 兩次都失敗」+ Transmit fallback）
+- SOP.md Step 13 同步加 9a/9b/9c 三步描述
+- `card_helper.sh` 頂部 usage 註解 + 底部 Usage echo 加 `[--check-only]` flag 說明
+
 ## [0.8.1] — 2026-05-29
 
 ### Fixed

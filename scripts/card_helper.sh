@@ -32,10 +32,12 @@
 #       GATE 後一次收尾：搬 original + JPG + 搬 OL + 列產出
 #       （等同 save-original 再 save-ol，配合 finalize.jsx 使用）
 #
-#   card_helper.sh upload-vcard <vcf-path>
+#   card_helper.sh upload-vcard [--check-only] <vcf-path>
 #       透過 curl + FTP 上傳 vcf 到 Transmit favorite「Streetvoice」對應 server 的 /vcard/。
 #       host/user 從 Transmit favorite 動態讀，密碼存 macOS Keychain（首次跑會 prompt）。
-#       FTP STOR 預設覆蓋同名檔。
+#       FTP STOR 預設覆蓋同名檔；對 transient 550 自動 retry 一次。
+#       --check-only：只做「拿密碼 + preflight + 查 server」，不上傳。
+#                     印 exists / new 並 exit 0，供 SKILL.md Step 9a 預檢判斷。
 #
 # basename 格式範例：20260527-王小明_Ming Wang
 # dest-folder 格式範例：~/Documents/SV-名片/王小明_Ming Wang
@@ -276,7 +278,16 @@ PYEOF
         ;;
 
     upload-vcard)
-        vcf="$1"
+        # 支援 --check-only：只做「拿密碼 + preflight + 查 server」，不上傳
+        # 結果印 exists / new 並 exit 0，供 SKILL.md Step 9a 預檢判斷
+        check_only=0
+        vcf=""
+        while [ $# -gt 0 ]; do
+            case "$1" in
+                --check-only) check_only=1; shift ;;
+                *)            vcf="$1"; shift ;;
+            esac
+        done
         if [ -z "$vcf" ] || [ ! -f "$vcf" ]; then
             echo "ERROR: upload-vcard 需要 <vcf-path>（檔案需存在）" >&2
             exit 1
@@ -366,6 +377,16 @@ APPLESCRIPT
             existed_before=1
         fi
 
+        # --check-only 模式：只回報「server 上是否已有同名檔」，不上傳
+        if [ "$check_only" = "1" ]; then
+            if [ "$existed_before" = "1" ]; then
+                echo "exists"
+            else
+                echo "new"
+            fi
+            exit 0
+        fi
+
         # STOR + retry（ProFTPD 偶有 transient 550，retry 一次幾乎都會 work）
         # 注意：不要 DELE-then-STOR。實測 owner 對「owner 非自己」的檔有 STOR 覆寫權限，
         # 但沒有 DELE 權限 — 跑 DELE 反而會 fail。直接 STOR 是對的路徑。
@@ -451,7 +472,7 @@ APPLESCRIPT
         echo "  $0 save-original <dest-folder> <basename>" >&2
         echo "  $0 save-ol <dest-folder> <basename>" >&2
         echo "  $0 finalize <dest-folder> <basename>" >&2
-        echo "  $0 upload-vcard <vcf-path>" >&2
+        echo "  $0 upload-vcard [--check-only] <vcf-path>" >&2
         exit 1
         ;;
 esac

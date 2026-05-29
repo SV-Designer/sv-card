@@ -283,21 +283,32 @@ finalize.jsx 內部行為：
 
 > 為什麼合併：原本 GATE 後是 4 個 tool call 交替（mcp→bash→mcp→bash），合併後變 2 個（mcp→bash），且 Claude 不用記中間步驟順序。
 
-### Step 13：上傳 vCard 到 server（呼叫 `card_helper.sh upload-vcard`）
+### Step 13：上傳 vCard 到 server（拆三步 9a/9b/9c，呼叫 `card_helper.sh upload-vcard`）
 
+**9a. 預查（必跑）**：
+```bash
+~/.claude/skills/sv-card/scripts/card_helper.sh upload-vcard --check-only "$DEST_DIR/{無空格英文名}.vcf"
+```
+印 `exists` / `new`。`exists` 觸發 9b GATE，`new` 直接 9c。
+
+**9b. 🛑 GATE**（僅 `exists` 觸發）：Claude 問使用者「`{vcf}` 偵測到相同檔案，請問是否覆蓋？」
+
+**9c. 上傳**：
 ```bash
 ~/.claude/skills/sv-card/scripts/card_helper.sh upload-vcard "$DEST_DIR/{無空格英文名}.vcf"
 ```
 
-子命令內部：
+子命令內部（9c）：
 1. 從 Transmit favorite「Streetvoice」（可由 `SV_TRANSMIT_FAVORITE` 環境變數覆寫）動態讀 host + user — 跨同事通用，不寫死
 2. 從 macOS Keychain（label：`sv-card upload (Streetvoice)`）取密碼；找不到就跳 `osascript display dialog` 跟使用者要，存進 Keychain（之後永久靜默）
 3. 用 `curl --list-only` 先查 server 是否已有同名檔，記 `existed_before`
-4. `curl --upload-file ... ftp://...` 上傳（FTP STOR 預設覆蓋同名檔）
+4. **STOR + retry**：第一次 STOR 失敗 sleep 1 秒 retry（ProFTPD 偶有 transient 550）
 5. 根據 `existed_before` 印兩種訊息擇一：
    - 新檔：`✅ vCard 已上傳 server`
    - 覆蓋：`✅ vCard 已上傳 server 並覆蓋舊檔`
 6. 印出公開 URL（`http://drive.streetvoice.com/vcard/{vcf}`）
+
+> **不採 DELE-then-STOR**：實測使用者對「owner 非自己」的檔有 STOR 覆寫權限但沒 DELE 權限，DELE 路徑根本走不通。直接 STOR + retry 才是對的路徑。
 
 > 為什麼不直接用 Transmit AppleScript：Transmit 5 字典中 `connect to favorite` 在 `tell document` scope 內反覆失敗（試了 6+ 個 syntax 變體），改用「Transmit favorite 動態查 host/user + macOS Keychain 存密碼 + curl FTP」更簡單可靠，且密碼完全不在 skill repo 內。
 

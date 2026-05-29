@@ -144,26 +144,43 @@ $.evalFile(Folder("~").fsName + "/.claude/skills/sv-card/scripts/finalize.jsx");
 （finalize 內部：mv original + sips JPG + mv OL + `ls -la` 列 5 個交付檔）
 
 ### Step 9：上傳 vCard 到 drive.streetvoice.com/vcard/
+
+**9a. 預查 server 是否已有同名檔（必跑）**
+```bash
+~/.claude/skills/sv-card/scripts/card_helper.sh upload-vcard --check-only "$DEST_DIR/<無空格英文名>.vcf"
+```
+腳本走「拿密碼 + preflight + curl --list-only」流程，不上傳。最後一行印：
+- `exists` → 進 **9b GATE**
+- `new` → 跳到 **9c 直接上傳**
+- 異常（找不到 favorite / 密碼錯）→ 同 9c 處理，由 upload 內邏輯接管
+
+**9b. 🛑 GATE — 偵測到重複時詢問**（僅 `exists` 觸發）
+
+Claude 用此句問使用者（**逐字**，把實際檔名代入）：
+
+> **`<無空格英文名>.vcf` 偵測到相同檔案，請問是否覆蓋？**
+
+- 使用者回 OK / 是 / 覆蓋 → 進 9c
+- 使用者回否定 → 跳過 Step 9（vcf 仍在本地 `$DEST_DIR/`，未來可手動跑上傳）
+
+**9c. 上傳（含 v0.8.1+ retry 邏輯）**
 ```bash
 ~/.claude/skills/sv-card/scripts/card_helper.sh upload-vcard "$DEST_DIR/<無空格英文名>.vcf"
 ```
-> 透過 curl + FTP 上傳到 Transmit favorite「Streetvoice」對應 server（首次 / 已使用過走同一條流程，UX 一致）。
->
-> **內部流程（v0.7.2+）**：
+
+> **內部流程（v0.8.1+）**：
 > 1. 取得密碼：Keychain 有就用；沒有 → 跳 dialog 要密碼 → 存 Keychain
-> 2. **preflight 登入檢查**：`curl --list-only` 對 `/vcard/` 做 noop test
->    - 通過 → 印 `✅ 登入 ${host} 成功` → 進入上傳
+> 2. **preflight 登入檢查**（curl --list-only noop）
 >    - 失敗 → 自動刪 Keychain 密碼 + 跳 dialog 重輸 → 再 preflight 一次
 >    - 仍失敗 → 印「請洽產品工程部」+ exit 1
-> 3. 上傳：FTP STOR（預設覆蓋同名檔）
+> 3. **STOR + retry 一次**：第一次 STOR 失敗 sleep 1 秒再試（ProFTPD 偶有 transient 550，retry 幾乎都會 work）
 >
 > **可能印出的結果訊息**（Claude 收尾要轉達給使用者）：
-> - ✅ 成功路徑：`✅ vCard 已上傳 server` 或 `✅ vCard 已上傳 server 並覆蓋舊檔` + 公開 URL
+> - ✅ 成功：`✅ vCard 已上傳 server` 或 `✅ vCard 已上傳 server 並覆蓋舊檔` + 公開 URL
 > - ❌ 登入失敗：`❌ 登入仍失敗 ... 請洽產品工程部協助確認帳號權限`
-> - ❌ 檔案無編輯權限：`❌ 該檔案未開放編輯權限 ... 請洽產品工程部協助開放該檔案的編輯權限`
-> - ❌ 新檔上傳失敗：`❌ 上傳失敗 ... 登入已驗證 OK 故非密碼問題 ... 請洽產品工程部確認 /vcard/ 目錄寫權限`
+> - ❌ STOR 兩次都失敗：`❌ STOR 兩次都失敗 ... 建議解法 a) 用 Transmit 拖檔到 /vcard/ 並選 Replace（含 vcf 本地路徑） b) 截圖洽產品工程部`
 >
-> 失敗訊息已切開「登入問題」vs「檔案/目錄權限問題」兩個獨立類別，不會混淆密碼錯與權限問題。
+> **不採 DELE-then-STOR**：實測使用者對「owner 非自己」的檔有 STOR 覆寫權限但沒 DELE 權限，DELE 路徑根本走不通。直接 STOR + retry 才是對的路徑。
 
 ## 📂 最終產出
 
