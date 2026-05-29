@@ -307,8 +307,20 @@ finalize.jsx 內部行為：
    - 新檔：`✅ vCard 已上傳 server`
    - 覆蓋：`✅ vCard 已上傳 server 並覆蓋舊檔`
 6. 印出公開 URL（`http://drive.streetvoice.com/vcard/{vcf}`）
+7. 兩次 STOR 都失敗 → 印「❌ 請手動用 Transmit 上傳並覆蓋舊檔」+ 本地路徑
 
 > **不採 DELE-then-STOR**：實測使用者對「owner 非自己」的檔有 STOR 覆寫權限但沒 DELE 權限，DELE 路徑根本走不通。直接 STOR + retry 才是對的路徑。
+
+**9d. 驗證**（9c 失敗 + 使用者手動 Transmit 上傳完後跑）：
+```bash
+~/.claude/skills/sv-card/scripts/card_helper.sh verify-vcard "$DEST_DIR/{無空格英文名}.vcf"
+```
+抓 server 上同名 vcf 內容 cmp 對本地：
+- `match` → 已驗證一致
+- `mismatch` → server 端內容跟本地不同（可能被 owner 覆蓋回去）
+- `missing` → server 上沒檔案
+
+> **為什麼要 9d 驗證**：實測過 9c STOR 226 Transfer complete 後，server 端檔案被其他 process / 真實 owner 覆蓋回原版。`9c ✅` 訊息可能 false positive。verify-vcard 用 cmp 二進位比對才確認 server 端真的是 sv-card 上傳的內容。
 
 > 為什麼不直接用 Transmit AppleScript：Transmit 5 字典中 `connect to favorite` 在 `tell document` scope 內反覆失敗（試了 6+ 個 syntax 變體），改用「Transmit favorite 動態查 host/user + macOS Keychain 存密碼 + curl FTP」更簡單可靠，且密碼完全不在 skill repo 內。
 

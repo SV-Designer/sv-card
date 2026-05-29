@@ -6,6 +6,27 @@
 
 ## [Unreleased]
 
+## [0.8.3] — 2026-05-29
+
+### Added
+- **`card_helper.sh verify-vcard <vcf-path>` 子命令**：抓 server 上同名 vcf 內容 cmp 二進位對比本地檔。印 `match` / `mismatch` / `missing`
+  - 抓檔用 `curl ... -o /tmp/sv_verify_${vcf_basename}`，比對完即 rm
+  - 處理「server 上找不到該檔」（curl 失敗）→ `missing`
+  - 處理「兩邊內容不同」（cmp 失敗）→ `mismatch`
+  - 完整一致 → `match`
+- **SKILL.md Step 9d「驗證手動上傳結果」**：9c STOR 兩次都失敗時，Claude 轉達「手動上傳 vcard 至 transmit 覆蓋舊檔」+ 等使用者完成後跑 9d 驗證
+  - `match` → 「✅ vCard 已驗證 server 端與本地一致」
+  - `mismatch` / `missing` → 「❌ 上傳失敗，請洽產品工程部協助確認」
+
+### Changed
+- **9c STOR 兩次都失敗訊息簡化**：移除原本「可能原因 + 建議解法 a/b」分兩種 case 印的邏輯，改為一條「請手動用 Transmit 上傳並覆蓋舊檔」+ 本地路徑。「可能原因」改由 Claude 評估當下情況補充
+- SKILL.md / SOP.md Step 9 / 13 同步加入 9d 驗證流程描述
+
+### 設計動機
+- 實測 #554 FuHuang.vcf：v0.8.1 STOR 顯示 `226 Transfer complete`（curl exit 0 = 視為成功）但事後 verify 發現 server 端是「曹家寧 Apple 通訊錄匯出 30 KB 版」，不是我們上傳的「sv-card 簡版 476 bytes」。
+- 推測：STOR 成功後，真實 vcf owner / 某 process 把 server 端覆蓋回原版。`9c ✅` 訊息會給使用者 false positive 信心。
+- 加 9d cmp 驗證才能確認 server 端真的是 sv-card 上傳的內容。
+
 ## [0.8.2] — 2026-05-29
 
 ### Added

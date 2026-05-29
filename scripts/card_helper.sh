@@ -39,6 +39,11 @@
 #       --check-only：只做「拿密碼 + preflight + 查 server」，不上傳。
 #                     印 exists / new 並 exit 0，供 SKILL.md Step 9a 預檢判斷。
 #
+#   card_helper.sh verify-vcard <vcf-path>
+#       抓 server 上同名 vcf 內容 cmp 對比本地內容（binary 比對）。
+#       用於 9c 上傳失敗 → 使用者手動 Transmit 覆蓋後 → 9d 驗證。
+#       印 match / mismatch / missing 並 exit 0。
+#
 # basename 格式範例：20260527-王小明_Ming Wang
 # dest-folder 格式範例：~/Documents/SV-名片/王小明_Ming Wang
 # sidecar 路徑：/tmp/sv_card_fields.json
@@ -423,16 +428,57 @@ APPLESCRIPT
         else
             echo "❌ STOR 兩次都失敗（curl exit ${curl_exit}），登入已驗證 OK" >&2
             echo "  → 對應檔案：${vcf_basename}" >&2
-            if [ "$existed_before" = "1" ]; then
-                echo "  → 可能原因：server 端對該檔案有特殊鎖定 / 寫權限限制" >&2
-            else
-                echo "  → 可能原因：${remote_dir}/ 目錄寫權限不足" >&2
-            fi
-            echo "  → 建議解法：" >&2
-            echo "     a. 用 Transmit 拖檔到 ${remote_dir}/ 並選『Replace』" >&2
-            echo "        vcf 本地路徑：${vcf}" >&2
-            echo "     b. 截圖洽產品工程部協助確認權限" >&2
+            echo "  → 本地 vcf 路徑：${vcf}" >&2
+            echo "  → 請手動用 Transmit 上傳並覆蓋舊檔" >&2
             exit 1
+        fi
+        ;;
+
+    verify-vcard)
+        # 驗證 server 上 vcf 內容 = 本地 vcf 內容（用於使用者手動上傳後的確認）
+        # 印 match / mismatch / missing，exit 0
+        vcf="$1"
+        if [ -z "$vcf" ] || [ ! -f "$vcf" ]; then
+            echo "ERROR: verify-vcard 需要 <vcf-path>（檔案需存在）" >&2
+            exit 1
+        fi
+
+        fav_name="${SV_TRANSMIT_FAVORITE:-Streetvoice}"
+        remote_dir="${SV_TRANSMIT_REMOTE_DIR:-/vcard}"
+        kc_label="sv-card upload (${fav_name})"
+
+        host=$(osascript -e "tell application \"Transmit\" to return address of (first favorite whose name is \"${fav_name}\")" 2>/dev/null || true)
+        user=$(osascript -e "tell application \"Transmit\" to return user name of (first favorite whose name is \"${fav_name}\")" 2>/dev/null || true)
+        if [ -z "$host" ] || [ -z "$user" ]; then
+            echo "ERROR: 找不到 Transmit favorite \"${fav_name}\"" >&2
+            exit 1
+        fi
+
+        password=$(security find-internet-password -s "$host" -a "$user" -l "$kc_label" -w 2>/dev/null || true)
+        if [ -z "$password" ]; then
+            echo "ERROR: Keychain 沒有 ${fav_name} 的密碼（需先跑過 upload-vcard 至少一次）" >&2
+            exit 1
+        fi
+
+        vcf_basename=$(basename "$vcf")
+        remote_tmp="/tmp/sv_verify_${vcf_basename}"
+
+        # 抓 server 內容
+        if ! curl -sS -fS --connect-timeout 10 \
+                "ftp://${host}${remote_dir}/${vcf_basename}" \
+                --user "${user}:${password}" -o "$remote_tmp" 2>/dev/null; then
+            rm -f "$remote_tmp"
+            echo "missing"
+            exit 0
+        fi
+
+        # 用 cmp 比對 binary
+        if cmp -s "$vcf" "$remote_tmp"; then
+            rm -f "$remote_tmp"
+            echo "match"
+        else
+            rm -f "$remote_tmp"
+            echo "mismatch"
         fi
         ;;
 
@@ -473,6 +519,7 @@ APPLESCRIPT
         echo "  $0 save-ol <dest-folder> <basename>" >&2
         echo "  $0 finalize <dest-folder> <basename>" >&2
         echo "  $0 upload-vcard [--check-only] <vcf-path>" >&2
+        echo "  $0 verify-vcard <vcf-path>" >&2
         exit 1
         ;;
 esac
