@@ -6,6 +6,14 @@
 
 ## [Unreleased]
 
+## [0.8.1] — 2026-05-29
+
+### Fixed
+- **`upload-vcard` 對 transient 550 的誤判**：v0.7.x「該檔案未開放編輯權限」訊息會在 ProFTPD 偶發 transient 550 時誤導使用者洽產品工程部開權限，但實測使用者帳號**有 STOR 覆寫權限**（Transmit GUI Replace 證實，curl 後續 retry 也直接成功）
+  - 改為 **STOR + retry 一次** 策略：第一次 STOR 失敗 sleep 1 秒再試，幾乎都會 work（實測 #554 FuHuang.vcf 場景 — owner 對該檔 owner 是別人但仍能 STOR 覆寫）
+  - 失敗 fallback 訊息加 Transmit 手動上傳指引（含 vcf 本地路徑），避免使用者卡死
+  - **不採 DELE-then-STOR**：實測使用者對「owner 非自己」的檔有 STOR 權限但沒 DELE 權限，DELE 路徑根本走不通
+
 ## [0.8.0] — 2026-05-29
 
 子品牌泛化第一步：SV 名片內部分支優化（無手機版、無分機、姓名以 PDF 欄位為主、未碰過備註停下問）。
