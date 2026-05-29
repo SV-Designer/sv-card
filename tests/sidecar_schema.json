@@ -8,14 +8,13 @@
   "properties": {
     "fields": {
       "type": "object",
-      "description": "Step 2 replace_fields.jsx 替換到 .ai 的 7 個 PH_* 欄位",
+      "description": "Step 2 replace_fields.jsx 替換到 .ai 的 PH_* 欄位。PH_PHONE_MOBILE 為選填（簽呈沒填手機時 omit）",
       "required": [
         "PH_NAME_CN_SURNAME",
         "PH_NAME_CN_GIVEN",
         "PH_NAME_EN",
         "PH_TITLE",
         "PH_PHONE_OFFICE",
-        "PH_PHONE_MOBILE",
         "PH_EMAIL"
       ],
       "additionalProperties": false,
@@ -31,8 +30,8 @@
     },
     "artifacts": {
       "type": "object",
-      "description": "Step 3 make_card_artifacts.py 產 vCard + QR 的欄位",
-      "required": ["surname", "given", "en", "title", "email", "mobile", "folder", "vcf_name"],
+      "description": "Step 3 make_card_artifacts.py 產 vCard + QR 的欄位。mobile 為選填（簽呈沒填手機時 omit，vCard 會跳過 TEL CELL 行）",
+      "required": ["surname", "given", "en", "title", "email", "folder", "vcf_name"],
       "additionalProperties": false,
       "properties": {
         "surname":  {"type": "string", "minLength": 1},

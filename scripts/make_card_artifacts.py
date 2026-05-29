@@ -65,13 +65,13 @@ def main():
         en       = a["en"]
         title    = a["title"]
         email    = a["email"]
-        mobile   = a["mobile"]
+        mobile   = a.get("mobile", "")  # 可選：簽呈沒填手機時 omit，vCard 跳過 TEL CELL
         folder   = Path(a["folder"])
         vcf_name = a["vcf_name"]
     else:
-        # 命名參數模式（向後相容）— 全部 required
+        # 命名參數模式（向後相容）— mobile 改為選填
         required = ("surname", "given", "en", "title", "email",
-                    "mobile", "folder", "vcf_name")
+                    "folder", "vcf_name")
         missing = [k for k in required if getattr(args, k, None) is None]
         if missing:
             sys.exit("ERROR: 命名參數模式需提供: "
@@ -81,7 +81,7 @@ def main():
         en       = args.en
         title    = args.title
         email    = args.email
-        mobile   = args.mobile
+        mobile   = args.mobile or ""  # 選填
         folder   = args.folder
         vcf_name = args.vcf_name
 

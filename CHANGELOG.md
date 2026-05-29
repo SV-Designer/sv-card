@@ -6,20 +6,42 @@
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-05-29
+
+子品牌泛化第一步：SV 名片內部分支優化（無手機版、無分機、姓名以 PDF 欄位為主、未碰過備註停下問）。
+
 ### Added
+- **無手機版分支**（核心）：簽呈沒填手機時自動走獨立流程
+  - `templates/20260529-王小明_無手機版.ai`：新模板，無 PH_PHONE_MOBILE TextFrame（共 6 個 PH_ 欄位 + PH_QRCODE）
+  - 模板原有 QR 圖形已命名為 `PH_QRCODE`（idx=7, pos=316,-398, size=40x40），讓 place_qr.jsx 能識別 placeholder
+  - `SV_TEMPLATE_NO_MOBILE` 環境變數預設指向此模板，可由 `~/.config/sv-card/env` 覆寫
+  - `card_helper.sh init --mobile ""` 自動選此模板
+- **無分機支援**：`card_helper.sh init --office-ext ""` → PH_PHONE_OFFICE 顯示 `+886-2-2741-7065`（不含 `#`）
+- `tests/fixtures/sidecar_valid_no_mobile.json`：無手機 + 無分機的 valid 樣本（4 個 fixture 全部通過 schema）
+- `.gitignore` 加 `~ai-*.tmp`：避免 Illustrator 暫存檔誤入 commit
 - `tests/smoke.sh`：本地或 CI 都可跑的煙霧測試。4 個 phase：bash -n（必跑）、shellcheck（可選）、python py_compile（必跑）、sidecar JSON schema 驗證（可選）。「可選」項本地未裝套件不會擋你跑，CI 上會自動裝
-- `tests/sidecar_schema.json`：sidecar `/tmp/sv_card_fields.json` 結構規範（JSON Schema draft-07）。明確規範 `fields` 7 個 PH_* 欄位 + `artifacts` 8 個欄位的 type / pattern / required
+- `tests/sidecar_schema.json`：sidecar `/tmp/sv_card_fields.json` 結構規範（JSON Schema draft-07）
 - `tests/validate_sidecar.py`：跑 schema validation 對 fixtures。負面樣本（檔名含 `_invalid_`）會被預期應該失敗
-- `tests/fixtures/sidecar_valid.json`：valid sidecar 樣本（王小明假名）
-- `tests/fixtures/sidecar_invalid_missing_field.json`：缺 PH_EMAIL 欄位的負面樣本
-- `tests/fixtures/sidecar_invalid_bad_phone.json`：電話格式不符合規範的負面樣本
+- `tests/fixtures/sidecar_valid.json`、`sidecar_invalid_missing_field.json`、`sidecar_invalid_bad_phone.json`
 - `tests/README.md`：測試範圍、跑法、擴充指南
 - `.github/workflows/ci.yml`：GitHub Actions 在 push 到 main / PR 時自動跑 smoke.sh（Ubuntu runner，自動裝 shellcheck + jsonschema）
 
 ### Changed
-- `.github/workflows/ci.yml` 加 `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true`：預先 opt-in Node.js 24。GitHub 公告 2026-06-02 起會強制把 actions/checkout@v4、actions/setup-python@v5 升到 Node 24；先設此 env 避免被動受影響、確保升級前流程已驗過綠
-- SKILL.md description 精簡 50%（393 → 193 字元）：移除執行細節（輸出檔案清單、路徑與環境變數覆寫、3 個腳本封裝、零 Bash prompt、GATE 細節、SOP 連結），只保留 trigger 判斷需要的資訊：定位 + 4 個觸發詞 + 必要輸入（簽呈 PDF）+ 不適用場景（子品牌、非常規簽呈）。Claude Code 在 available-skills 列表用 description 判斷觸發，太長會稀釋訊號
-- SKILL.md Step 9 同步 v0.7.2 內部流程：列出 preflight 登入檢查流程、4 種可能結果訊息（成功 / 登入失敗 / 檔案無編輯權限 / 目錄寫權限不足）讓 Claude 能正確轉達
+- `card_helper.sh init`：`--mobile` 和 `--office-ext` 從必填改為選填。Usage / header comment 同步更新
+- `make_vcard.py`：`data.get("mobile") or ""` 取代 `data["mobile"]`；空字串時跳過整行 `TEL;type=CELL;type=VOICE:`
+- `make_card_artifacts.py`：sidecar mode 用 `a.get("mobile", "")` 而非 `a["mobile"]`，避免 KeyError；命名參數模式把 `--mobile` 移出 required
+- `tests/sidecar_schema.json`：`fields.PH_PHONE_MOBILE` 和 `artifacts.mobile` 從 required 改為 optional（兩者仍保留型別/pattern 規範）
+- **SKILL.md PDF 萃取規則表大幅重寫**：
+  - 加「以 PDF『名片上的姓名』欄位為主」規則（即使 ≠ 申請人，常見於外部夥伴情境）
+  - 「室內分機」+「手機」改為「有 / 空白」兩態，明示對應 init 參數與下游行為
+  - 加「其他需求 / 備註欄」處理規則（未碰過特殊請求 → 萃取階段停下問）
+- SKILL.md「非常規簽呈 → 停下問」：移除「室內分機空白」（已自動處理），保留「特殊備註 / 外部 email / 非 TW 街聲版」
+- SKILL.md Step 1 init 範例加說明：`--mobile ""` 和 `--office-ext ""` 的下游影響
+- SKILL.md「涉及檔案」表加無手機版模板路徑
+- SOP.md「資料轉換規則」加「無分機」+「無手機」兩列；新增「分支處理（v0.8.0+）」段詳列 4 種簽呈情境 + init 參數 + 結果
+- `.github/workflows/ci.yml` 加 `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true`：預先 opt-in Node.js 24。GitHub 公告 2026-06-02 起會強制把 actions/checkout@v4、actions/setup-python@v5 升到 Node 24
+- SKILL.md description 精簡 50%（393 → 193 字元）：移除執行細節，只保留 trigger 判斷需要的資訊
+- SKILL.md Step 9 同步 v0.7.2 內部流程：列出 preflight 登入檢查流程、4 種可能結果訊息
 
 ## [0.7.2] — 2026-05-28
 

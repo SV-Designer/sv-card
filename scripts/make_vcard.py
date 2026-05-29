@@ -49,7 +49,8 @@ def build_vcard(data: dict, photo_block: str = "") -> str:
     en_name = data["english_name"]      # 含 alias 如「阿明 Ming Wang」
     title = data["title"]
     email = data["email"]
-    mobile = data["mobile"]              # 例: 0900-000-000
+    # mobile 可選：簽呈沒填手機時為空字串 / None，跳過 TEL CELL 整行
+    mobile = data.get("mobile") or ""
 
     lines = [
         "BEGIN:VCARD",
@@ -63,10 +64,13 @@ def build_vcard(data: dict, photo_block: str = "") -> str:
         f"EMAIL;type=INTERNET;type=pref:{email}",
         "TEL;type=WORK;type=VOICE;type=pref:02-27417065",
         "TEL;type=WORK;type=FAX:02-27488490",
-        f"TEL;type=CELL;type=VOICE:{mobile}",
+    ]
+    if mobile:
+        lines.append(f"TEL;type=CELL;type=VOICE:{mobile}")
+    lines.extend([
         "ADR;type=WORK;type=pref:;;松山區光復北路 11 巷 35 號 11 樓;松山區;台北市;105;台灣",
         "URL;type=WORK;type=pref:www.streetvoice.com",
-    ]
+    ])
     if photo_block:
         lines.append(photo_block)
     lines.append("END:VCARD")

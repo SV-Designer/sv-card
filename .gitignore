@@ -13,3 +13,6 @@ __pycache__/
 # 使用者本地設定（不應 commit）
 .env
 .env.local
+
+# Illustrator 暫存檔
+~ai-*.tmp

@@ -11,9 +11,11 @@
 #       首次製作確認：mkdir + open Finder + 寫 env (SV_OUTPUT_CONFIRMED=1)
 #
 #   card_helper.sh init --chinese "..." --english "..." --surname "..." --given "..." \
-#                       --title "..." --email "..." --mobile "..." --office-ext "..."
+#                       --title "..." --email "..." [--mobile "..."] [--office-ext "..."]
 #       建資料夾 + 複製模板 + 開 Illustrator + 輪詢 + 寫 sidecar /tmp/sv_card_fields.json
 #       sidecar 內含 Step 2 (fields) + Step 3 (artifacts) 兩區塊，後續步驟皆從此讀取
+#       --mobile 空（或不傳）→ 用無手機版模板（SV_TEMPLATE_NO_MOBILE）；vCard 跳過 TEL CELL
+#       --office-ext 空（或不傳）→ PH_PHONE_OFFICE 不含 # 分機，只有 +886-2-2741-7065
 #
 #   card_helper.sh artifacts [args...]
 #       無 args → 預設讀 /tmp/sv_card_fields.json 的 artifacts 區塊
@@ -47,9 +49,11 @@ set -e
 # 可由環境變數或 ~/.config/sv-card/env 覆寫
 SV_CARD_SKILL_DIR="${SV_CARD_SKILL_DIR:-$HOME/.claude/skills/sv-card}"
 SV_TEMPLATE="${SV_TEMPLATE:-$SV_CARD_SKILL_DIR/templates/20260522-王小明.ai}"
+SV_TEMPLATE_NO_MOBILE="${SV_TEMPLATE_NO_MOBILE:-$SV_CARD_SKILL_DIR/templates/20260529-王小明_無手機版.ai}"
 SV_OUTPUT_BASE="${SV_OUTPUT_BASE:-$HOME/Documents/SV-名片}"
 SV_SIDECAR="${SV_SIDECAR:-/tmp/sv_card_fields.json}"
 
+# 預設模板（有手機版）必存；無手機版只在 init 真的選到時才檢查
 if [ ! -f "$SV_TEMPLATE" ]; then
     echo "ERROR: 找不到模板 .ai 檔: $SV_TEMPLATE" >&2
     echo "  → 請執行 install.sh，或設定 SV_TEMPLATE 環境變數指向實際路徑" >&2
@@ -133,19 +137,33 @@ EOF
             esac
         done
 
-        # 必填檢查
+        # 必填檢查（mobile / office-ext 改為選填：空字串 = 簽呈沒填）
         missing=""
         for kv in "chinese:$chinese_full" "english:$english_name" "surname:$surname" \
-                  "given:$given" "title:$title" "email:$email" "mobile:$mobile" \
-                  "office-ext:$office_ext"; do
+                  "given:$given" "title:$title" "email:$email"; do
             k="${kv%%:*}"; v="${kv#*:}"
             [ -z "$v" ] && missing="$missing --$k"
         done
         if [ -n "$missing" ]; then
             echo "ERROR: init 缺少必填參數:$missing" >&2
             echo "用法: init --chinese ... --english ... --surname ... --given ..." >&2
-            echo "          --title ... --email ... --mobile ... --office-ext ..." >&2
+            echo "          --title ... --email ... [--mobile ...] [--office-ext ...]" >&2
+            echo "  --mobile 空（或不傳）→ 用無手機版模板，vCard 跳過 TEL CELL 行" >&2
+            echo "  --office-ext 空（或不傳）→ 公司電話 PH_PHONE_OFFICE 不含 # 分機" >&2
             exit 1
+        fi
+
+        # 根據是否有手機選模板（影響 PH_QRCODE 等版面位置一致；皆已預先命名）
+        if [ -z "$mobile" ]; then
+            template="$SV_TEMPLATE_NO_MOBILE"
+            if [ ! -f "$template" ]; then
+                echo "ERROR: 找不到無手機版模板: $template" >&2
+                echo "  → 請設定 SV_TEMPLATE_NO_MOBILE 環境變數，或執行 install.sh 後重試" >&2
+                exit 1
+            fi
+            echo "📋 使用無手機版模板（簽呈沒填手機）"
+        else
+            template="$SV_TEMPLATE"
         fi
 
         name_folder="${chinese_full}_${english_name}"
@@ -154,41 +172,54 @@ EOF
         new_file="$dest_dir/${today}-${name_folder}.ai"
 
         mkdir -p "$dest_dir"
-        cp -L "$SV_TEMPLATE" "$new_file"
+        cp -L "$template" "$new_file"
         echo "✅ 模板已複製: $new_file"
 
-        # 寫 sidecar JSON（推導 mobile_display、vcf_name、ph_phone_office）
+        # 寫 sidecar JSON
+        # 處理規則：
+        #   - office_ext 空 → PH_PHONE_OFFICE 不含 # 分機，只有 +886-2-2741-7065
+        #   - mobile 空    → fields 不放 PH_PHONE_MOBILE（replace_fields.jsx 找不到會 silent skip）
+        #                    artifacts 也不放 mobile（make_vcard.py 會跳過 TEL CELL 行）
         SURNAME="$surname" GIVEN="$given" EN="$english_name" \
         TITLE="$title" EMAIL="$email" MOBILE="$mobile" \
         OFFICE_EXT="$office_ext" DEST_DIR="$dest_dir" \
         python3 - <<'PYEOF' > "$SV_SIDECAR"
 import json, os
 mobile_vcard = os.environ["MOBILE"]
-mobile_display = mobile_vcard.replace(" ", "-")
+office_ext   = os.environ["OFFICE_EXT"]
 en = os.environ["EN"]
 vcf_name = en.replace(" ", "") + ".vcf"
-data = {
-    "fields": {
-        "PH_NAME_CN_SURNAME": os.environ["SURNAME"],
-        "PH_NAME_CN_GIVEN":   os.environ["GIVEN"],
-        "PH_NAME_EN":         en,
-        "PH_TITLE":           os.environ["TITLE"],
-        "PH_PHONE_OFFICE":    "+886-2-2741-7065#" + os.environ["OFFICE_EXT"],
-        "PH_PHONE_MOBILE":    mobile_display,
-        "PH_EMAIL":           os.environ["EMAIL"],
-    },
-    "artifacts": {
-        "surname":  os.environ["SURNAME"],
-        "given":    os.environ["GIVEN"],
-        "en":       en,
-        "title":    os.environ["TITLE"],
-        "email":    os.environ["EMAIL"],
-        "mobile":   mobile_vcard,
-        "folder":   os.environ["DEST_DIR"],
-        "vcf_name": vcf_name,
-    },
+
+# PH_PHONE_OFFICE：有 ext 加 #，沒 ext 純號碼
+ph_phone_office = "+886-2-2741-7065"
+if office_ext:
+    ph_phone_office += "#" + office_ext
+
+fields = {
+    "PH_NAME_CN_SURNAME": os.environ["SURNAME"],
+    "PH_NAME_CN_GIVEN":   os.environ["GIVEN"],
+    "PH_NAME_EN":         en,
+    "PH_TITLE":           os.environ["TITLE"],
+    "PH_PHONE_OFFICE":    ph_phone_office,
+    "PH_EMAIL":           os.environ["EMAIL"],
 }
-print(json.dumps(data, ensure_ascii=False, indent=2))
+if mobile_vcard:
+    fields["PH_PHONE_MOBILE"] = mobile_vcard.replace(" ", "-")
+
+artifacts = {
+    "surname":  os.environ["SURNAME"],
+    "given":    os.environ["GIVEN"],
+    "en":       en,
+    "title":    os.environ["TITLE"],
+    "email":    os.environ["EMAIL"],
+    "folder":   os.environ["DEST_DIR"],
+    "vcf_name": vcf_name,
+}
+if mobile_vcard:
+    artifacts["mobile"] = mobile_vcard
+
+print(json.dumps({"fields": fields, "artifacts": artifacts},
+                 ensure_ascii=False, indent=2))
 PYEOF
         echo "✅ sidecar 寫入: $SV_SIDECAR"
 
@@ -394,7 +425,7 @@ APPLESCRIPT
         echo "  $0 check-firstrun" >&2
         echo "  $0 confirm-firstrun <output-path>" >&2
         echo "  $0 init --chinese ... --english ... --surname ... --given ..." >&2
-        echo "              --title ... --email ... --mobile ... --office-ext ..." >&2
+        echo "              --title ... --email ... [--mobile ...] [--office-ext ...]" >&2
         echo "  $0 artifacts [args...]" >&2
         echo "  $0 save-original <dest-folder> <basename>" >&2
         echo "  $0 save-ol <dest-folder> <basename>" >&2
