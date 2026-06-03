@@ -6,6 +6,18 @@
 
 ## [Unreleased]
 
+## [0.8.4] — 2026-06-03
+
+### Fixed
+- **`card_helper.sh` init 內 Python 沒實作「名片用 +886 國碼格式」轉換**：SKILL.md / SOP.md 規格明文「名片用 `+886-XXX-XXX-XXX` 國碼格式；vCard 沿用簽呈原格式」，但 v0.8.3 之前 Python 邏輯只做 `mobile_vcard.replace(" ", "-")`，導致 `PH_PHONE_MOBILE` 仍是簽呈原樣 `0909-050-269`，名片畫面開頭沒 +886
+  - 新增 `to_card_mobile()` helper：空格→dash + 開頭 `0` → `+886-`
+  - 只動 `fields["PH_PHONE_MOBILE"]`（名片用）；`artifacts["mobile"]`（vCard 用）仍沿用簽呈原格式不變
+  - 實測：`0909-050-269` → `+886-909-050-269`、`0900 000 000` → `+886-900-000-000`、已是 `+886-...` 不再加前綴
+
+### 設計動機
+- 本次 Strong Wu 名片實測時使用者發現名片畫面手機開頭沒 +886，回看 sidecar 確認 `PH_PHONE_MOBILE` 寫的就是 `0909-050-269`（未轉），追到 line 213-214 Python 邏輯缺漏
+- SKILL.md 的「規格描述」與 card_helper.sh 的「實作」長期不同步 — 之前的名片可能也都是 0 開頭沒人發現（vcf 對外格式 OK，名片視覺差異小但仍違規格）
+
 ## [0.8.3] — 2026-05-29
 
 ### Added

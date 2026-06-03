@@ -210,8 +210,15 @@ fields = {
     "PH_PHONE_OFFICE":    ph_phone_office,
     "PH_EMAIL":           os.environ["EMAIL"],
 }
+def to_card_mobile(s):
+    # 名片用 +886 國碼格式：空格→dash，開頭 0 → +886-
+    s = s.replace(" ", "-")
+    if s.startswith("0"):
+        s = "+886-" + s[1:]
+    return s
+
 if mobile_vcard:
-    fields["PH_PHONE_MOBILE"] = mobile_vcard.replace(" ", "-")
+    fields["PH_PHONE_MOBILE"] = to_card_mobile(mobile_vcard)
 
 artifacts = {
     "surname":  os.environ["SURNAME"],
