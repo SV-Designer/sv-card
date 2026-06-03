@@ -44,6 +44,11 @@
 #       用於 9c 上傳失敗 → 使用者手動 Transmit 覆蓋後 → 9d 驗證。
 #       印 match / mismatch / missing 並 exit 0。
 #
+#   card_helper.sh backup-pdf <pdf-path> <dest-dir>
+#       備份簽呈 PDF 到 <dest-dir>，重命名為「簽呈編號-{表單號}.pdf」。
+#       用 pypdf 改 mediabox/cropbox 隱藏「表單註釋」section 以下（含簽核列表）。
+#       依賴 pypdf + pdfplumber（pip3 install --user pypdf pdfplumber）。
+#
 # basename 格式範例：20260527-王小明_Ming Wang
 # dest-folder 格式範例：~/Documents/SV-名片/王小明_Ming Wang
 # sidecar 路徑：/tmp/sv_card_fields.json
@@ -515,6 +520,18 @@ APPLESCRIPT
         ls -la "$dest/"
         ;;
 
+    backup-pdf)
+        # 備份簽呈 PDF 到 DEST_DIR，重命名為「簽呈編號-{表單號}.pdf」
+        # 用 pypdf 改 mediabox/cropbox 隱藏「表單註釋」section 以下（含簽核列表）
+        pdf="$1"
+        dest="$2"
+        if [ -z "$pdf" ] || [ -z "$dest" ]; then
+            echo "ERROR: backup-pdf 需要 <pdf-path> <dest-dir>" >&2
+            exit 1
+        fi
+        exec python3 "$SV_CARD_SKILL_DIR/scripts/backup_signoff_pdf.py" "$pdf" "$dest"
+        ;;
+
     *)
         echo "Usage:" >&2
         echo "  $0 check-firstrun" >&2
@@ -522,6 +539,7 @@ APPLESCRIPT
         echo "  $0 init --chinese ... --english ... --surname ... --given ..." >&2
         echo "              --title ... --email ... [--mobile ...] [--office-ext ...]" >&2
         echo "  $0 artifacts [args...]" >&2
+        echo "  $0 backup-pdf <pdf-path> <dest-dir>" >&2
         echo "  $0 save-original <dest-folder> <basename>" >&2
         echo "  $0 save-ol <dest-folder> <basename>" >&2
         echo "  $0 finalize <dest-folder> <basename>" >&2

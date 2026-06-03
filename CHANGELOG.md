@@ -6,6 +6,24 @@
 
 ## [Unreleased]
 
+## [0.8.5] — 2026-06-03
+
+### Added
+- **`card_helper.sh backup-pdf <pdf-path> <dest-dir>` 子命令**：把使用者上傳的簽呈 PDF 備份到製作檔資料夾，重命名為 `簽呈編號-{表單號}.pdf`
+- **`scripts/backup_signoff_pdf.py`**：核心邏輯 — pdfplumber 抓表單號 + 找「表單註釋」word top，pypdf 改 mediabox/cropbox 的 lower-left y 隱藏下半（含表單註釋 section + 簽核列表）
+- **SKILL.md Step 1.5「備份簽呈 PDF」**：Claude 在 init 完成、拿到 `$DEST_DIR` 後立即呼叫 backup-pdf
+- 最終產出表新增 `簽呈編號-{表單號}.pdf` 一列（變成 6 個檔）
+- SOP.md Step 5.5 詳細描述（座標系換算、CropBox 而非真裁的設計理由、margin=1pt 實測過程）
+
+### 設計動機
+- 使用者要求名片製作完後保留簽呈 PDF 作為佐證/檔案紀錄，但簽核列表那塊資訊雜訊太多
+- **裁切策略**：用 PDF 標準的 CropBox 隱藏視窗下半，原內容仍在檔案內（無損、實作極簡），但 PDF viewer 只顯示上半。這對名片簽呈這種無隱私需求的文件夠用
+- **切點選擇**：以「表單註釋」word 為錨點（不用「簽核列表」是因為 PDF 頁首也有「簽核列表」文字會抓錯第一個出現）。margin=1pt 經使用者實測 5→12→15→3→2→1 拍板
+- **依賴**：`pypdf` + `pdfplumber`（pip3 install --user，已驗證可用）。install.sh 尚未同步加入此依賴檢查（TODO）
+
+### Changed
+- SKILL.md `init` 內部推導說明同步 v0.8.4：`PH_PHONE_MOBILE` 改寫成「空格→dash、開頭 0→+886-」（之前還寫舊版的「mobile-display 空格→dash」）
+
 ## [0.8.4] — 2026-06-03
 
 ### Fixed

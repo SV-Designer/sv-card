@@ -178,6 +178,30 @@ Claude 用 Read tool 讀 PDF，萃取：
 >
 > 冷啟動實測：Illustrator 啟動 + 載檔 + textFrames 就緒約 1 秒內完成。
 
+### Step 5.5：備份簽呈 PDF（v0.8.5+）
+
+Claude 在 init 完成、拿到 `$DEST_DIR` 之後，立即備份簽呈 PDF 到該資料夾：
+
+```bash
+~/.claude/skills/sv-card/scripts/card_helper.sh backup-pdf "<簽呈 PDF 原始路徑>" "$DEST_DIR"
+```
+
+**內部行為**（`backup_signoff_pdf.py`）：
+1. `pdfplumber` 讀第一頁，regex `表單號\s*[:：]\s*(\d+)` 抓表單號
+2. `page.extract_words()` 找 `text == "表單註釋"` 的 word，取 `top`（pdfplumber 是 top-down 座標）
+3. `pypdf` 開原 PDF，改 `page.mediabox.lower_left` 與 `page.cropbox.lower_left` 的 y 值為 `page.height - cut_top - 1`（PDF 是 bottom-up）
+4. 寫到 `<dest-dir>/簽呈編號-{表單號}.pdf`
+
+**結果**：
+- 保留：標題「名片申請」+ 申請人/表單號行 + 名片欄位表格（直到「所屬地區 TW」）
+- 隱藏：「表單註釋」section（標題 + 提示文字）+ 「簽核列表 表格 圖形」+ 簽核表格
+
+> **為何用 CropBox 而非真正裁切**：CropBox 是 PDF 標準視窗概念，原內容仍在檔案內，只是 viewer 不顯示。優點是無損、實作極簡（只改一個 box 座標）；缺點是 PDF 編輯工具可還原 — 對名片簽呈這種已無隱私的文件夠用。
+>
+> **margin=1pt 由實測拍板**：使用者試過 5/12/15/3/2/1，1pt 視覺上「所屬地區」表格剛好貼齊頁底但未被切到。「所屬地區」bottom 到「表單註釋」top 距離 ~15pt，所以 margin 上限約 14pt（再大會切到表格）。
+
+> **依賴**：`pip3 install --user pypdf pdfplumber`（v0.8.5+ 必要）。`install.sh` 應同步更新（TODO）。
+
 ### Step 6 + 7：Claude 替換 7 欄位 + 自動存檔（呼叫 `replace_fields.jsx`）
 
 Claude 透過 MCP 執行（**無需傳資料，自動讀 sidecar**）：
