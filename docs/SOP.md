@@ -62,7 +62,7 @@ Claude 自動依序：
 
 > 💡 在 Step 9 GATE 時：使用者切去 Illustrator 看到的就是「替換 + QR 置入後的最新狀態」（Step 8 已 save 進資料夾）。確認 OK 後再產出最終交付檔。
 
-### 中子 BVI 版分支（v0.10.0+）
+### 中子 BVI 版分支（v0.10.0+；v0.10.1+ 加輸出路徑分流 + email/職稱 GATE）
 
 `template_type == "中子BVI"` 時改走以下流程（簡化版）：
 
@@ -71,9 +71,12 @@ Claude 自動依序：
         ↓
 [我]  ② 第一句話：「好準備執行，illustator請確保為關閉狀態」
         ↓
-[我]  ③ 讀 PDF → 萃取資料
+[我]  ③ 讀 PDF → 萃取資料 + 依「公司」欄位推導 --company
+       「中子創新（BVI）」→ bvi；「中子文化股份有限公司」→ wenhua
         ↓
-[我]  ④ 建資料夾 + 複製中子模板（`SV_TEMPLATE_ZHONGZI`）
+[我]  ④ 建資料夾 + 複製中子模板（`SV_TEMPLATE_ZHONGZI`），輸出 base 依 --company 分流：
+       bvi → $SV_OUTPUT_BASE_ZHONGZI（~/Documents/02_街聲/6 名片/中子）
+       wenhua → $SV_OUTPUT_BASE_ZHONGZI_WENHUA（~/Documents/02_街聲/6 名片/中子文化）
         ↓
 [我]  ⑤ 開檔
         ↓
@@ -496,7 +499,7 @@ finalize.jsx 內部行為：
 
 ### P2 — 需求驅動（等實際 PDF 進來再做）
 
-- [x] ~~中子 BVI 版~~（v0.10.0 完成）— 模板 `templates/20260609-王小明_中子BVI.ai`，`--template-type zhongzi-bvi` 走簡化分支（跳過 vCard / QR / 上傳，輸出 4 個檔案）。**初期測試階段**：依 `feedback_new_card_type_testing`，每步先停下確認，跑 ≥ 2 次成功後才討論加入自動化。
+- [x] ~~中子 BVI 版~~（v0.10.0 完成 + v0.10.1 補強）— 模板 `templates/20260609-王小明_中子BVI.ai`，`--template-type zhongzi-bvi --company {bvi|wenhua}` 走簡化分支（跳過 vCard / QR / 上傳，輸出 4 個檔案，路徑依公司分流）。**初期測試階段**：依 `feedback_new_card_type_testing`，每步先停下確認，跑 ≥ 2 次成功後才討論加入自動化。
 - [ ] **中子版 — 無手機版**：目前只做有手機版，等實際無手機簽呈進來再加（同 TW 版做法，另建 `SV_TEMPLATE_ZHONGZI_NO_MOBILE` 變數）
 - [ ] **CN / EN / Legacy（含色號）版**
       尚無範本，等實際簽呈進來再做。依 memory `feedback_sv_card_decisions` 原則 1 處理。
@@ -515,6 +518,7 @@ finalize.jsx 內部行為：
 - ✅ `extract_signoff_fields.py` 全面 regex 收緊（v0.8.9，8 條 `\s` → `[ \t]`，#554 回歸測試 diff 為空）
 - ✅ 公司固定資訊抽離至 `~/.config/sv-card/company.json`（v0.9.0，`company_config.py` 載入器 + fallback DEFAULTS，3 處 hardcoded 改 1 處設定）
 - ✅ 中子 BVI 版分支（v0.10.0，新增 `--template-type zhongzi-bvi`、`SV_TEMPLATE_ZHONGZI` 環境變數、sidecar `template_type` 標記、artifacts/QR/upload 自動 skip）
+- ✅ 中子分流輸出路徑 + 規則補強（v0.10.1，新增 `--company bvi/wenhua`、`SV_OUTPUT_BASE_ZHONGZI` / `SV_OUTPUT_BASE_ZHONGZI_WENHUA` 環境變數、email 白名單加 @neuin.com、職稱中英混填 GATE 規則）
 
 ---
 

@@ -70,6 +70,9 @@ SV_TEMPLATE="${SV_TEMPLATE:-$SV_CARD_SKILL_DIR/templates/20260522-王小明.ai}"
 SV_TEMPLATE_NO_MOBILE="${SV_TEMPLATE_NO_MOBILE:-$SV_CARD_SKILL_DIR/templates/20260529-王小明_無手機版.ai}"
 SV_TEMPLATE_ZHONGZI="${SV_TEMPLATE_ZHONGZI:-$SV_CARD_SKILL_DIR/templates/20260609-王小明_中子BVI.ai}"
 SV_OUTPUT_BASE="${SV_OUTPUT_BASE:-$HOME/Documents/SV-名片}"
+# 中子版輸出 base（v0.10.1+，依簽呈「公司」欄位分流）
+SV_OUTPUT_BASE_ZHONGZI="${SV_OUTPUT_BASE_ZHONGZI:-$HOME/Documents/02_街聲/6 名片/中子}"
+SV_OUTPUT_BASE_ZHONGZI_WENHUA="${SV_OUTPUT_BASE_ZHONGZI_WENHUA:-$HOME/Documents/02_街聲/6 名片/中子文化}"
 SV_SIDECAR="${SV_SIDECAR:-/tmp/sv_card_fields.json}"
 
 # 預設模板（TW 有手機版）必存；其餘版型只在 init 真的選到時才檢查
@@ -147,6 +150,7 @@ EOF
         mobile=""
         office_ext=""
         template_type="tw"  # tw（預設）/ zhongzi-bvi
+        company=""          # 僅 template_type=zhongzi-bvi 時必填：bvi / wenhua（v0.10.1+）
         while [ $# -gt 0 ]; do
             case "$1" in
                 --chinese)       chinese_full="$2"; shift 2 ;;
@@ -158,6 +162,7 @@ EOF
                 --mobile)        mobile="$2"; shift 2 ;;
                 --office-ext)    office_ext="$2"; shift 2 ;;
                 --template-type) template_type="$2"; shift 2 ;;
+                --company)       company="$2"; shift 2 ;;
                 *)
                     echo "ERROR: init 不認識的參數: $1" >&2
                     exit 1 ;;
@@ -171,6 +176,24 @@ EOF
                 echo "ERROR: --template-type 只接受 'tw' 或 'zhongzi-bvi'，收到: $template_type" >&2
                 exit 1 ;;
         esac
+
+        # --company 驗證（v0.10.1+：中子版分流輸出路徑用）
+        if [ "$template_type" = "zhongzi-bvi" ]; then
+            case "$company" in
+                bvi|wenhua) ;;
+                "")
+                    echo "ERROR: --template-type zhongzi-bvi 時必填 --company（bvi / wenhua）" >&2
+                    echo "  → bvi    = 中子創新 BVI（母公司）" >&2
+                    echo "  → wenhua = 中子文化股份有限公司（旗下公司）" >&2
+                    exit 1 ;;
+                *)
+                    echo "ERROR: --company 只接受 'bvi' 或 'wenhua'，收到: $company" >&2
+                    exit 1 ;;
+            esac
+        elif [ -n "$company" ]; then
+            echo "ERROR: --company 僅在 --template-type zhongzi-bvi 時可用" >&2
+            exit 1
+        fi
 
         # 必填檢查（mobile / office-ext 改為選填：空字串 = 簽呈沒填）
         missing=""
@@ -219,7 +242,13 @@ EOF
         fi
 
         name_folder="${chinese_full}_${english_name}"
-        dest_dir="$SV_OUTPUT_BASE/$name_folder"
+        # 選輸出 base（v0.10.1+：中子版依 --company 分流）
+        case "$company" in
+            bvi)    output_base="$SV_OUTPUT_BASE_ZHONGZI" ;;
+            wenhua) output_base="$SV_OUTPUT_BASE_ZHONGZI_WENHUA" ;;
+            *)      output_base="$SV_OUTPUT_BASE" ;;  # TW 版預設
+        esac
+        dest_dir="$output_base/$name_folder"
         today=$(date +%Y%m%d)
         new_file="$dest_dir/${today}-${name_folder}.ai"
 
@@ -235,7 +264,7 @@ EOF
         SURNAME="$surname" GIVEN="$given" EN="$english_name" \
         TITLE="$title" EMAIL="$email" MOBILE="$mobile" \
         OFFICE_EXT="$office_ext" DEST_DIR="$dest_dir" \
-        TEMPLATE_TYPE="$template_type" \
+        TEMPLATE_TYPE="$template_type" COMPANY="$company" \
         SV_CARD_SCRIPT_DIR="$SV_CARD_SKILL_DIR/scripts" \
         python3 - <<'PYEOF' > "$SV_SIDECAR"
 import json, os, sys
@@ -246,6 +275,7 @@ mobile_vcard   = os.environ["MOBILE"]
 office_ext     = os.environ["OFFICE_EXT"]
 en             = os.environ["EN"]
 template_type  = os.environ["TEMPLATE_TYPE"]
+company        = os.environ["COMPANY"]
 vcf_name       = en.replace(" ", "") + ".vcf"
 
 # PH_PHONE_OFFICE：有 ext 加 #，沒 ext 純號碼（電話 prefix 從 company_config 讀，v0.9.0+ P1）
@@ -272,7 +302,10 @@ if mobile_vcard:
     fields["PH_PHONE_MOBILE"] = to_card_mobile(mobile_vcard)
 
 # template_type 標記在 sidecar top level，artifacts 子命令會據此 skip vCard/QR（v0.10.0+ 中子版）
+# company 標記在 sidecar top level（v0.10.1+：中子版分流輸出路徑）
 out = {"fields": fields, "template_type": template_type}
+if company:
+    out["company"] = company
 
 if template_type == "tw":
     # 只 TW 版需要 artifacts 區塊（產 vCard + QR）

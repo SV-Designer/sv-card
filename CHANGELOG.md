@@ -6,6 +6,39 @@
 
 ## [Unreleased]
 
+## [0.10.1] — 2026-06-09
+
+### Added
+- **中子版輸出路徑分流**：`card_helper.sh init` 新增 `--company` 參數（值：`bvi` / `wenhua`，**僅 `--template-type zhongzi-bvi` 時必填**）
+  - `bvi` → 中子創新 BVI（母公司）員工，輸出至 `$SV_OUTPUT_BASE_ZHONGZI`（預設 `~/Documents/02_街聲/6 名片/中子`）
+  - `wenhua` → 中子文化股份有限公司（旗下公司）員工，輸出至 `$SV_OUTPUT_BASE_ZHONGZI_WENHUA`（預設 `~/Documents/02_街聲/6 名片/中子文化`）
+- 兩個新環境變數 `SV_OUTPUT_BASE_ZHONGZI` / `SV_OUTPUT_BASE_ZHONGZI_WENHUA`
+- Sidecar JSON 在 `template_type == "zhongzi-bvi"` 時於頂層新增 `company` 欄位（debug / 未來分析用）
+
+### Changed
+- **SKILL.md「非常規簽呈」規則 + PDF 萃取必看項** 更新：
+  - **Email 白名單** 新增 `@neuin.com`（中子員工正常信箱），與 `@streetvoice.com` 並列；其他網域才觸發 GATE
+  - **職稱中英文混填 GATE**（例：簽呈寫「事業發展總監（英文: Business Development Director）」）→ 停下問使用者用中文還是英文
+- **SKILL.md Step 1 範例** 補上 `--company` 參數說明
+- **docs/SOP.md** 中子分支流程圖補上 `--company` 推導邏輯與輸出路徑分流
+
+### 設計動機
+- 使用者澄清公司關係：中子創新 = 母公司、中子文化 = 旗下公司。兩種子公司的員工名片需分別歸檔到不同資料夾管理
+- 中子員工 email 域名固定 `@neuin.com`，原本「非 @streetvoice.com 都停下問」規則會誤觸發；改為白名單模式
+- 職稱中英文混填無法自動 disambiguate，但範本 `PH_TITLE` 只能放一個字串，必須 GATE
+- 維持向後相容：TW 流程不變（`--company` 在 TW 版禁用、報錯阻擋）
+
+### 回歸測試（6 綠）
+- TW 版 sidecar：`template_type=tw`、無 `company` key、有 `artifacts` 區塊、`PH_PHONE_OFFICE` 正確 ✓
+- 中子 BVI + `--company bvi`：sidecar `company=bvi`、無 `artifacts`、輸出在 `$SV_OUTPUT_BASE_ZHONGZI` ✓
+- 中子 BVI + `--company wenhua`：sidecar `company=wenhua`、輸出在 `$SV_OUTPUT_BASE_ZHONGZI_WENHUA` ✓
+- 中子 BVI 漏傳 `--company` → 報錯阻擋（含解釋 bvi/wenhua 對應）✓
+- 無效 `--company invalid` → 報錯阻擋 ✓
+- TW 版多傳 `--company` → 報錯阻擋（`--company` 僅 zhongzi-bvi 可用）✓
+
+### 已知問題（v0.10.2 候選）
+- `extract_signoff_fields.py` 對中子版簽呈 PDF 全 null：中子簽呈 PDF 的中文表格欄位是「圖片化呈現」（不是真實 text layer），pdfplumber 抓不到。目前用 Claude 視覺萃取代替
+
 ## [0.10.0] — 2026-06-09
 
 ### Added

@@ -55,16 +55,19 @@ description: StreetVoice 街聲名片自動化製作（TW 街聲版 + 中子 BVI
 - **中英文 typo**：腳本照字面抓（如 `Strong Wo` 會原樣輸出），Claude 看 PDF 視覺判斷是否為 typo → 停下問
 - **「其他需求」非空且非「請協助送印」「TW」這類常見備註** → 停下問
 - **「表單註釋」`form_remark_is_placeholder=false` 表示申請人實際填了內容** → 停下問
-- **`template_type == "中子BVI"`**（v0.10.0+）→ 走中子分支（傳 `--template-type zhongzi-bvi`），跳過 Step 3 artifacts、Step 4 place QR、Step 9 upload vCard；**初期每步驟先停下確認**（依 `feedback_new_card_type_testing` 規則，成功跑 ≥ 2 次才討論加入自動化）
+- **`template_type == "中子BVI"`**（v0.10.0+）→ 走中子分支（傳 `--template-type zhongzi-bvi --company bvi|wenhua`），跳過 Step 3 artifacts、Step 4 place QR、Step 9 upload vCard；**初期每步驟先停下確認**（依 `feedback_new_card_type_testing` 規則，成功跑 ≥ 2 次才討論加入自動化）。**`--company` 依簽呈「公司」欄位推導：「中子創新（BVI）」→ `bvi`；「中子文化股份有限公司」→ `wenhua`**。輸出路徑分流（v0.10.1+）：bvi → `~/Documents/02_街聲/6 名片/中子`；wenhua → `~/Documents/02_街聲/6 名片/中子文化`
 - **`template_type != "TW 街聲"` 且 != "中子BVI"`**（CN / EN）→ 停下問（未支援）
 - **「名片上的姓名」與「申請人」不同**（外部夥伴情境）→ 雖然腳本仍能抽，但要跟使用者確認此為預期
+- **職稱中英文混填**（如「事業發展總監（英文: Business Development Director）」，v0.10.1+）→ **停下問使用者用中文還是英文**，再決定 `--title` 傳哪個值
+- **Email 網域白名單**（v0.10.1+）：`@streetvoice.com`（TW 員工）、`@neuin.com`（中子員工）皆視為正常；其他網域 → 停下問
 
 ## 🚧 非常規簽呈 → 停下問
 
 依 `feedback_sv_card_decisions` 原則 1（新款逐步確認）規則，遇以下狀況**不要照走自動流程**，先停下問使用者：
 - 「其他需求」/ 備註欄出現**過去未碰過的特殊請求**（覆寫姓名、改地址、改 logo、特殊版型等）
-- Email 非 @streetvoice.com（外部信箱）
-- 版型非「TW 街聲」（中子 / CN / EN 版尚未支援）
+- Email 非 `@streetvoice.com` 也非 `@neuin.com`（v0.10.1+：白名單已含中子員工域名）
+- 版型非「TW 街聲」也非「中子BVI」（CN / EN 版尚未支援）
+- 職稱中英混填（v0.10.1+，例：「事業發展總監（英文: ...）」）
 
 > 已自動處理的分支（不再屬於非常規）：簽呈無分機 → `--office-ext ""`；簽呈無手機 → `--mobile ""`。
 
@@ -117,7 +120,8 @@ description: StreetVoice 街聲名片自動化製作（TW 街聲版 + 中子 BVI
     --email "<email>" \
     --mobile "<簽呈原格式手機，例如 +886 900 000 000>" \
     --office-ext "<分機，例如 395>" \
-    --template-type "<tw 或 zhongzi-bvi，預設 tw>"
+    --template-type "<tw 或 zhongzi-bvi，預設 tw>" \
+    --company "<bvi 或 wenhua，僅 zhongzi-bvi 必填>"
 ```
 > **`--mobile` / `--office-ext` 為選填**：簽呈空白時傳空字串 `""`（或不傳）。
 > - `--mobile ""` → 自動選無手機版模板（SV_TEMPLATE_NO_MOBILE）、vCard 跳過 TEL CELL
@@ -126,6 +130,11 @@ description: StreetVoice 街聲名片自動化製作（TW 街聲版 + 中子 BVI
 > **`--template-type` 為選填**（v0.10.0+，預設 `tw`）：
 > - `tw`（預設）→ SV 全流程，含 vCard / QR / 上傳
 > - `zhongzi-bvi` → 中子 BVI 版（簽呈版型「中子BVI」），用 `SV_TEMPLATE_ZHONGZI` 模板；sidecar 不寫 artifacts 區塊，Step 3 / 4 / 9 自動跳過
+>
+> **`--company` 僅 `--template-type zhongzi-bvi` 時必填**（v0.10.1+）：
+> - `bvi` → 中子創新（BVI）員工，輸出至 `$SV_OUTPUT_BASE_ZHONGZI`（預設 `~/Documents/02_街聲/6 名片/中子`）
+> - `wenhua` → 中子文化股份有限公司員工，輸出至 `$SV_OUTPUT_BASE_ZHONGZI_WENHUA`（預設 `~/Documents/02_街聲/6 名片/中子文化`）
+> - 依簽呈「公司」欄位推導：「中子創新（BVI）」→ `bvi`；「中子文化股份有限公司」→ `wenhua`
 >
 > init 內部推導：名片用 `PH_PHONE_MOBILE`（空格→dash、開頭 `0` → `+886-`，v0.8.4+）、vCard `mobile`（沿用簽呈原格式）、`vcf-name`（英文名去空格+.vcf）、PH_PHONE_OFFICE。
 > 資料寫入 `/tmp/sv_card_fields.json` sidecar，Step 2/3 自動讀取。腳本印出 `BASENAME=...` 和 `DEST_DIR=...` 給 Step 8 收尾用。
