@@ -6,6 +6,46 @@
 
 ## [Unreleased]
 
+## [0.10.3] — 2026-06-10
+
+### Added
+- **`backup_signoff_pdf.py` 加 `--form-no <N>` 參數**：覆寫表單號（中子 PDF 必傳）
+- **`card_helper.sh backup-pdf` 加可選 `<form-no>` 第三參數**：forward 給 py 端 `--form-no`
+- **`card_helper.sh init` 在 sidecar 寫 `dest_path` 頂層欄位**：jsx 用此繞 Illustrator `fullName` corrupt bug
+
+### Changed
+- **簽呈 PDF 裁切改用固定 `KEEP_TOP_PX = 352`**（取代原本「pdfplumber 找『表單註釋』word top - 1pt」動態邏輯）
+  - 中子 PDF 中文 layer 圖片化（CID 編碼），pdfplumber 抓不到「表單註釋」word，動態邏輯壞掉
+  - 固定值對 TW + 中子 + 未來新版型一致；實測對 TW 安全（過去動態切點約 ~265px，352 保留更多 = 更安全）
+  - 副作用：`backup_signoff_pdf.py` 不再需要 `extract_words()` 找 word，僅在 `--form-no` 未傳時用 pdfplumber 抓「表單號:」regex
+- **中子版預設輸出路徑改 `~/Documents/SV-名片/中子` 與 `~/Documents/SV-名片/中子文化`**（原本 `~/Documents/02_街聲/6 名片/{中子,中子文化}` 是 owner 私人路徑，對下載 sv-card 的其他人不友善）
+  - owner 本機已被 `~/.config/sv-card/env` 覆寫，**改預設值不影響 owner 自己**
+- **`replace_fields.jsx` 改用 sidecar `dest_path` 做顯式 `saveAs`**（繞 Illustrator 啟動中時 `open` 會把 `fullName` 設為 `/Applications/Adobe Illustrator 2026` 的 corrupt 狀態）
+- **`finalize.jsx` 讀 sidecar `template_type`**：`zhongzi-bvi` 跳過清殘留
+  - 原因：中子模板有 16383×16383 clip group 內含 7 個 PH_* TextFrame（PH_NAME_CN_*/PH_NAME_EN/PH_TITLE/PH_PHONE_OFFICE/PH_PHONE_MOBILE/PH_EMAIL），舊版清殘留誤判此 group 為 SVG 殘留刪掉，連帶刪 7 個 PH_* 造成名片資訊全失
+- **`to_card_mobile` 加尾段 `(\d{3})(\d{3})$` regex 拆段**：簽呈寫 `0909-050269` → 名片印 `+886-909-050-269`（之前印 `+886-909-050269` 後段六位連在一起不好讀）
+- **SKILL.md / SOP.md** 對應更新 backup-pdf 用法、中子預設路徑、PDF 萃取規則
+
+### 設計動機
+- 跑劉琪琪中子 BVI 簽呈（表單號 647）時連續踩到 4 個 bug：
+  1. `backup-pdf` 抓不到「表單號:」與「表單註釋」（中子 PDF 圖片化）
+  2. `finalize.jsx` 清殘留把 7 個 PH_* TextFrame 連帶刪光（中子模板 clip group 結構不同）
+  3. `replace_fields.jsx` 的 `d.save()` 因 Illustrator `fullName` corrupt 失敗（9031 錯誤）
+  4. `to_card_mobile` 尾段 6 位連續數字沒拆 dash
+- 使用者拍板：簽呈裁切固定 `352px`，所有版型一致，移除依賴「中文 word 抓取」的動態邏輯
+- 中子版預設路徑改用 `~/Documents/SV-名片/{中子,中子文化}`：與 TW 版同根，對下載 sv-card 的其他人友善
+
+### 回歸測試（6 綠）
+- `to_card_mobile` 尾段 dash：`0909-050269` → `+886-909-050-269` ✓
+- sidecar `dest_path` 已寫入頂層欄位 ✓
+- 中子 BVI 走新預設 `SV_OUTPUT_BASE_ZHONGZI` ✓
+- 中子文化走新預設 `SV_OUTPUT_BASE_ZHONGZI_WENHUA` ✓
+- `backup_signoff_pdf.py --form-no 647` 對中子 PDF 跑通（772 KB 裁切版）✓
+- `card_helper.sh backup-pdf <pdf> <dest> 647` 第三參數 forward 給 py 跑通 ✓
+
+### 不破壞
+- TW 流程零改動（`backup-pdf` 不傳 `<form-no>` 時 fallback regex 自動抓；`replace_fields.jsx` 用 saveAs 顯式路徑對 TW 也是 saveAs 同樣文件路徑，無視覺差異）
+
 ## [0.10.2] — 2026-06-10
 
 ### Added

@@ -132,8 +132,8 @@ description: StreetVoice 街聲名片自動化製作（TW 街聲版 + 中子 BVI
 > - `zhongzi-bvi` → 中子 BVI 版（簽呈版型「中子BVI」），用 `SV_TEMPLATE_ZHONGZI` 模板；sidecar 不寫 artifacts 區塊，Step 3 / 4 / 9 自動跳過
 >
 > **`--company` 僅 `--template-type zhongzi-bvi` 時必填**（v0.10.1+）：
-> - `bvi` → 中子創新（BVI）員工，輸出至 `$SV_OUTPUT_BASE_ZHONGZI`（預設 `~/Documents/02_街聲/6 名片/中子`），名片印「中子創新有限公司」
-> - `wenhua` → 中子文化股份有限公司員工，輸出至 `$SV_OUTPUT_BASE_ZHONGZI_WENHUA`（預設 `~/Documents/02_街聲/6 名片/中子文化`），名片印「中子文化股份有限公司」
+> - `bvi` → 中子創新（BVI）員工，輸出至 `$SV_OUTPUT_BASE_ZHONGZI`（v0.10.3+ 預設 `~/Documents/SV-名片/中子`），名片印「中子創新有限公司」
+> - `wenhua` → 中子文化股份有限公司員工，輸出至 `$SV_OUTPUT_BASE_ZHONGZI_WENHUA`（v0.10.3+ 預設 `~/Documents/SV-名片/中子文化`），名片印「中子文化股份有限公司」
 > - 依簽呈「公司」欄位推導：「中子創新（BVI）」→ `bvi`；「中子文化股份有限公司」→ `wenhua`
 > - **`PH_COMPANY` 文字框會被自動替換**（v0.10.2+）：bvi → `中子創新有限公司`；wenhua → `中子文化股份有限公司`
 >
@@ -142,11 +142,11 @@ description: StreetVoice 街聲名片自動化製作（TW 街聲版 + 中子 BVI
 
 ### Step 1.5：備份簽呈 PDF（v0.8.5+）
 ```bash
-~/.claude/skills/sv-card/scripts/card_helper.sh backup-pdf "<簽呈 PDF 原始路徑>" "$DEST_DIR"
+~/.claude/skills/sv-card/scripts/card_helper.sh backup-pdf "<簽呈 PDF 原始路徑>" "$DEST_DIR" [<form-no>]
 ```
 > 把使用者上傳的簽呈 PDF 備份到製作檔資料夾，命名為 `簽呈編號-{表單號}.pdf`。
-> 內部用 pypdf 改 mediabox/cropbox 隱藏「表單註釋」section 以下（含簽核列表），保留：標題 → 名片欄位表格 → 所屬地區。
-> 切點：「表單註釋」word top - 1pt（margin 經實測拍板）。
+> v0.10.3+：固定**保留上方 352px**（取代原本「找『表單註釋』word top - 1pt」動態邏輯）。原因：中子版 PDF 中文 layer 圖片化（CID 編碼），pdfplumber 抓不到「表單註釋」word，改用固定值對 TW + 中子 + 未來新版型一致。
+> 表單號取得：CLI 第三參數 `<form-no>` > pdfplumber 抓「表單號:」regex > 報錯。**中子 PDF 必傳 `<form-no>`**（Claude 視覺判斷後 echo 進命令）；TW 可省略，腳本自動 regex 抓。
 
 ### Step 2：替換 7 欄位 + 自動存檔（mcp__illustrator__run）
 ```javascript

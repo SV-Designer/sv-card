@@ -246,22 +246,26 @@ vCard 與名片**不完全相同**，注意：
 Claude 在 init 完成、拿到 `$DEST_DIR` 之後，立即備份簽呈 PDF 到該資料夾：
 
 ```bash
-~/.claude/skills/sv-card/scripts/card_helper.sh backup-pdf "<簽呈 PDF 原始路徑>" "$DEST_DIR"
+~/.claude/skills/sv-card/scripts/card_helper.sh backup-pdf "<簽呈 PDF 原始路徑>" "$DEST_DIR" [<form-no>]
 ```
 
-**內部行為**（`backup_signoff_pdf.py`）：
-1. `pdfplumber` 讀第一頁，regex `表單號\s*[:：]\s*(\d+)` 抓表單號
-2. `page.extract_words()` 找 `text == "表單註釋"` 的 word，取 `top`（pdfplumber 是 top-down 座標）
-3. `pypdf` 開原 PDF，改 `page.mediabox.lower_left` 與 `page.cropbox.lower_left` 的 y 值為 `page.height - cut_top - 1`（PDF 是 bottom-up）
-4. 寫到 `<dest-dir>/簽呈編號-{表單號}.pdf`
+**內部行為**（v0.10.3+ `backup_signoff_pdf.py`）：
+1. 取表單號：CLI 第三參數 `<form-no>` > `pdfplumber` regex `表單號\s*[:：]\s*(\d+)` > 報錯
+   - **中子 PDF 必傳 `<form-no>`**：中文 layer 圖片化（CID 編碼），pdfplumber 抓不到「表單號:」中文標籤
+   - TW 簽呈可省略：腳本自動 regex 抓
+2. `pypdf` 開原 PDF，改 `page.mediabox.lower_left` 與 `page.cropbox.lower_left` 的 y 值為 `page.height - 352`（**固定保留上方 352px**，v0.10.3 拍板）
+3. 寫到 `<dest-dir>/簽呈編號-{表單號}.pdf`
 
 **結果**：
-- 保留：標題「名片申請」+ 申請人/表單號行 + 名片欄位表格（直到「所屬地區 TW」）
-- 隱藏：「表單註釋」section（標題 + 提示文字）+ 「簽核列表 表格 圖形」+ 簽核表格
+- 保留：標題「名片申請」+ 申請人/表單號行 + 名片欄位表格（直到「所屬地區」），約頁面上方 352px
+- 隱藏：「其他需求」box 下半 + 「表單註釋」section + 「簽核列表」表格
+
+> **為何用固定 352px**（v0.10.3 取代動態邏輯）：
+> 1. 中子 PDF 中文 layer 圖片化（CID 編碼），`extract_words()` 抓不到「表單註釋」word
+> 2. 固定值對 TW + 中子 + 未來新版型一致；實測對 TW 簽呈也安全（過去動態切點約 ~265px，352 保留更多 = 更安全）
+> 3. 設計簡化，移除 `pdfplumber` 在 `backup_signoff_pdf.py` 的依賴（但 `extract_signoff_fields.py` 仍依賴 pdfplumber）
 
 > **為何用 CropBox 而非真正裁切**：CropBox 是 PDF 標準視窗概念，原內容仍在檔案內，只是 viewer 不顯示。優點是無損、實作極簡（只改一個 box 座標）；缺點是 PDF 編輯工具可還原 — 對名片簽呈這種已無隱私的文件夠用。
->
-> **margin=1pt 由實測拍板**：使用者試過 5/12/15/3/2/1，1pt 視覺上「所屬地區」表格剛好貼齊頁底但未被切到。「所屬地區」bottom 到「表單註釋」top 距離 ~15pt，所以 margin 上限約 14pt（再大會切到表格）。
 
 > **依賴**：`pip3 install --user pypdf pdfplumber`（v0.8.5+ 必要）。`install.sh` 應同步更新（TODO）。
 
@@ -521,6 +525,13 @@ finalize.jsx 內部行為：
 - ✅ 中子 BVI 版分支（v0.10.0，新增 `--template-type zhongzi-bvi`、`SV_TEMPLATE_ZHONGZI` 環境變數、sidecar `template_type` 標記、artifacts/QR/upload 自動 skip）
 - ✅ 中子分流輸出路徑 + 規則補強（v0.10.1，新增 `--company bvi/wenhua`、`SV_OUTPUT_BASE_ZHONGZI` / `SV_OUTPUT_BASE_ZHONGZI_WENHUA` 環境變數、email 白名單加 @neuin.com、職稱中英混填 GATE 規則）
 - ✅ 中子版動態公司名 `PH_COMPANY`（v0.10.2，模板 textFrames[4] 命名為 PH_COMPANY；card_helper.sh sidecar 依 --company 推導：bvi → 中子創新有限公司、wenhua → 中子文化股份有限公司；replace_fields.jsx 自動處理新欄位無需改動）
+- ✅ v0.10.3 五大修復：
+  - (1) `backup_signoff_pdf.py` 改用固定 `KEEP_TOP_PX=352`，移除「找『表單註釋』word」邏輯；加 `--form-no` 參數（中子 PDF 必傳）
+  - (2) `card_helper.sh backup-pdf` 加可選 `<form-no>` 第三參數 forward 給 py
+  - (3) 中子版預設輸出路徑改 `~/Documents/SV-名片/{中子,中子文化}`（跟 TW 版同根 `SV-名片/`）
+  - (4) `card_helper.sh init` 寫 `dest_path` 進 sidecar；`replace_fields.jsx` 用此顯式 `saveAs` 繞 corrupt `fullName`（Illustrator 啟動中 `open` 會把 `fullName` 設為 `/Applications/Adobe Illustrator 2026`）
+  - (5) `finalize.jsx` 讀 sidecar `template_type`，**中子版跳過清殘留**（中子模板有 16383×16383 clip group 內含 7 個 PH_*，清殘留會連帶刪掉）
+  - (6) `to_card_mobile` 加尾段 `(\d{3})(\d{3})$` regex 拆段：`+886-909-050269` → `+886-909-050-269`
 
 ---
 

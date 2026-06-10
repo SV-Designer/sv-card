@@ -26,18 +26,37 @@
     var d = app.activeDocument;
     if (!d) { return "ERROR: no active document"; }
 
-    // 1. 清殘留（位置或尺寸超出 1000 的物件，通常是 SVG 匯入殘留）
-    var top = d.layers[0].pageItems;
-    var toRemove = [];
-    for (var i = 0; i < top.length; i++) {
-        var it = top[i];
-        if (Math.abs(it.position[0]) > 1000 || Math.abs(it.position[1]) > 1000
-            || it.width > 1000 || it.height > 1000) {
-            toRemove.push(it);
+    // 讀 sidecar 拿 template_type（v0.10.3+：中子版要跳過清殘留）
+    var templateType = "tw";
+    try {
+        var sf = new File("/tmp/sv_card_fields.json");
+        if (sf.exists) {
+            sf.encoding = "UTF-8";
+            sf.open("r");
+            var sc = sf.read();
+            sf.close();
+            var sd = eval("(" + sc + ")");
+            if (sd && sd.template_type) templateType = sd.template_type;
         }
+    } catch (e) {}
+
+    // 1. 清殘留（位置或尺寸超出 1000 的物件，通常是 SVG 匯入殘留）
+    //    v0.10.3+：中子版跳過 — 中子模板有 16383×16383 clip group 內含 PH_*，
+    //    清殘留會連帶刪掉 7 個 PH_* TextFrame 造成名片資訊全失
+    var removedCount = 0;
+    if (templateType !== "zhongzi-bvi") {
+        var top = d.layers[0].pageItems;
+        var toRemove = [];
+        for (var i = 0; i < top.length; i++) {
+            var it = top[i];
+            if (Math.abs(it.position[0]) > 1000 || Math.abs(it.position[1]) > 1000
+                || it.width > 1000 || it.height > 1000) {
+                toRemove.push(it);
+            }
+        }
+        removedCount = toRemove.length;
+        for (var j = 0; j < toRemove.length; j++) { toRemove[j].remove(); }
     }
-    var removedCount = toRemove.length;
-    for (var j = 0; j < toRemove.length; j++) { toRemove[j].remove(); }
 
     // 2. saveAs 原檔到 /tmp（中文路徑會 8700，外層用 mv 搬）
     var origOpts = new IllustratorSaveOptions();
@@ -57,5 +76,6 @@
     olOpts.compatibility = Compatibility.ILLUSTRATOR16;
     d.saveAs(new File(olTmp), olOpts);
 
-    return "OK removed=" + removedCount + " original=" + originalTmp + " ol=" + olTmp;
+    return "OK removed=" + removedCount + " template=" + templateType
+        + " original=" + originalTmp + " ol=" + olTmp;
 })();

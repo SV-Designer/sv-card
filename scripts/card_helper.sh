@@ -71,8 +71,9 @@ SV_TEMPLATE_NO_MOBILE="${SV_TEMPLATE_NO_MOBILE:-$SV_CARD_SKILL_DIR/templates/202
 SV_TEMPLATE_ZHONGZI="${SV_TEMPLATE_ZHONGZI:-$SV_CARD_SKILL_DIR/templates/20260609-王小明_中子BVI.ai}"
 SV_OUTPUT_BASE="${SV_OUTPUT_BASE:-$HOME/Documents/SV-名片}"
 # 中子版輸出 base（v0.10.1+，依簽呈「公司」欄位分流）
-SV_OUTPUT_BASE_ZHONGZI="${SV_OUTPUT_BASE_ZHONGZI:-$HOME/Documents/02_街聲/6 名片/中子}"
-SV_OUTPUT_BASE_ZHONGZI_WENHUA="${SV_OUTPUT_BASE_ZHONGZI_WENHUA:-$HOME/Documents/02_街聲/6 名片/中子文化}"
+# v0.10.3+：預設改用 ~/Documents/SV-名片/ 子資料夾，跟 TW 版同根（對下載者友善）
+SV_OUTPUT_BASE_ZHONGZI="${SV_OUTPUT_BASE_ZHONGZI:-$HOME/Documents/SV-名片/中子}"
+SV_OUTPUT_BASE_ZHONGZI_WENHUA="${SV_OUTPUT_BASE_ZHONGZI_WENHUA:-$HOME/Documents/SV-名片/中子文化}"
 SV_SIDECAR="${SV_SIDECAR:-/tmp/sv_card_fields.json}"
 
 # 預設模板（TW 有手機版）必存；其餘版型只在 init 真的選到時才檢查
@@ -264,6 +265,7 @@ EOF
         SURNAME="$surname" GIVEN="$given" EN="$english_name" \
         TITLE="$title" EMAIL="$email" MOBILE="$mobile" \
         OFFICE_EXT="$office_ext" DEST_DIR="$dest_dir" \
+        DEST_PATH="$new_file" \
         TEMPLATE_TYPE="$template_type" COMPANY="$company" \
         SV_CARD_SCRIPT_DIR="$SV_CARD_SKILL_DIR/scripts" \
         python3 - <<'PYEOF' > "$SV_SIDECAR"
@@ -276,6 +278,7 @@ office_ext     = os.environ["OFFICE_EXT"]
 en             = os.environ["EN"]
 template_type  = os.environ["TEMPLATE_TYPE"]
 company        = os.environ["COMPANY"]
+dest_path      = os.environ["DEST_PATH"]  # v0.10.3+：jsx 用此繞 corrupt fullName
 vcf_name       = en.replace(" ", "") + ".vcf"
 
 # PH_PHONE_OFFICE：有 ext 加 #，沒 ext 純號碼（電話 prefix 從 company_config 讀，v0.9.0+ P1）
@@ -292,10 +295,16 @@ fields = {
     "PH_EMAIL":           os.environ["EMAIL"],
 }
 def to_card_mobile(s):
-    # 名片用 +886 國碼格式：空格→dash，開頭 0 → +886-
+    # 名片用 +886 國碼格式：
+    #   1. 空格 → dash
+    #   2. 開頭 0 → +886-
+    #   3. v0.10.3+：尾段連續 6 位數字 → 拆「3+3」加 dash
+    #      例: +886-909-050269 → +886-909-050-269
+    import re as _re
     s = s.replace(" ", "-")
     if s.startswith("0"):
         s = "+886-" + s[1:]
+    s = _re.sub(r"(\d{3})(\d{3})$", r"\1-\2", s)
     return s
 
 if mobile_vcard:
@@ -314,7 +323,8 @@ if template_type == "zhongzi-bvi" and company in COMPANY_NAME_MAP:
 
 # template_type 標記在 sidecar top level，artifacts 子命令會據此 skip vCard/QR（v0.10.0+ 中子版）
 # company 標記在 sidecar top level（v0.10.1+：中子版分流輸出路徑）
-out = {"fields": fields, "template_type": template_type}
+# dest_path 在 sidecar top level（v0.10.3+：jsx 用此繞 corrupt fullName 做顯式 saveAs）
+out = {"fields": fields, "template_type": template_type, "dest_path": dest_path}
 if company:
     out["company"] = company
 
@@ -617,14 +627,22 @@ APPLESCRIPT
 
     backup-pdf)
         # 備份簽呈 PDF 到 DEST_DIR，重命名為「簽呈編號-{表單號}.pdf」
-        # 用 pypdf 改 mediabox/cropbox 隱藏「表單註釋」section 以下（含簽核列表）
+        # v0.10.3+：固定保留上方 352px（取代 pdfplumber 找「表單註釋」word top 的動態邏輯）
+        # 表單號取得：CLI 第三參數 > pdfplumber regex「表單號:」> 報錯
         pdf="$1"
         dest="$2"
+        form_no="$3"  # 選填；中子 PDF 必傳
         if [ -z "$pdf" ] || [ -z "$dest" ]; then
-            echo "ERROR: backup-pdf 需要 <pdf-path> <dest-dir>" >&2
+            echo "ERROR: backup-pdf 需要 <pdf-path> <dest-dir> [<form-no>]" >&2
+            echo "  <form-no> 選填：中子 PDF 表單號圖片化抓不到，必傳；TW 自動 regex 抓" >&2
             exit 1
         fi
-        exec python3 "$SV_CARD_SKILL_DIR/scripts/backup_signoff_pdf.py" "$pdf" "$dest"
+        if [ -n "$form_no" ]; then
+            exec python3 "$SV_CARD_SKILL_DIR/scripts/backup_signoff_pdf.py" \
+                "$pdf" "$dest" --form-no "$form_no"
+        else
+            exec python3 "$SV_CARD_SKILL_DIR/scripts/backup_signoff_pdf.py" "$pdf" "$dest"
+        fi
         ;;
 
     extract-pdf)
