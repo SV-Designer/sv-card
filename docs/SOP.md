@@ -80,7 +80,7 @@ Claude 自動依序：
         ↓
 [我]  ⑤ 開檔
         ↓
-[我]  ⑥ 替換 7 欄位 → 自動 save
+[我]  ⑥ 替換 8 欄位（v0.10.2+ 含 PH_COMPANY 動態公司名）→ 自動 save
         ↓
 [我]  ⑦ ❌ 跳過 artifacts（無 vCard / QR；card_helper.sh artifacts 偵測 template_type 自動 skip）
         ↓
@@ -117,6 +117,7 @@ Claude 自動依序：
 | `PH_PHONE_MOBILE` | +886-900-000-000 | 6.2pt |
 | `PH_EMAIL` | mingwang@streetvoice.com | 6.2pt |
 | `PH_QRCODE` | (GroupItem 40×40 placeholder) | - |
+| `PH_COMPANY` | 中子創新有限公司（v0.10.2+，**僅中子BVI 模板有**）| 6pt |
 
 QR Code 命名（置入後）：`PH_QRCODE`（模板已內建命名，直接用名字找）
 
@@ -519,6 +520,7 @@ finalize.jsx 內部行為：
 - ✅ 公司固定資訊抽離至 `~/.config/sv-card/company.json`（v0.9.0，`company_config.py` 載入器 + fallback DEFAULTS，3 處 hardcoded 改 1 處設定）
 - ✅ 中子 BVI 版分支（v0.10.0，新增 `--template-type zhongzi-bvi`、`SV_TEMPLATE_ZHONGZI` 環境變數、sidecar `template_type` 標記、artifacts/QR/upload 自動 skip）
 - ✅ 中子分流輸出路徑 + 規則補強（v0.10.1，新增 `--company bvi/wenhua`、`SV_OUTPUT_BASE_ZHONGZI` / `SV_OUTPUT_BASE_ZHONGZI_WENHUA` 環境變數、email 白名單加 @neuin.com、職稱中英混填 GATE 規則）
+- ✅ 中子版動態公司名 `PH_COMPANY`（v0.10.2，模板 textFrames[4] 命名為 PH_COMPANY；card_helper.sh sidecar 依 --company 推導：bvi → 中子創新有限公司、wenhua → 中子文化股份有限公司；replace_fields.jsx 自動處理新欄位無需改動）
 
 ---
 

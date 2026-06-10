@@ -301,6 +301,17 @@ def to_card_mobile(s):
 if mobile_vcard:
     fields["PH_PHONE_MOBILE"] = to_card_mobile(mobile_vcard)
 
+# 中子版動態公司名（v0.10.2+）
+# 範本 PH_COMPANY 文字框依 --company 推導：
+#   bvi    → 「中子創新有限公司」（母公司）
+#   wenhua → 「中子文化股份有限公司」（旗下公司）
+COMPANY_NAME_MAP = {
+    "bvi":    "中子創新有限公司",
+    "wenhua": "中子文化股份有限公司",
+}
+if template_type == "zhongzi-bvi" and company in COMPANY_NAME_MAP:
+    fields["PH_COMPANY"] = COMPANY_NAME_MAP[company]
+
 # template_type 標記在 sidecar top level，artifacts 子命令會據此 skip vCard/QR（v0.10.0+ 中子版）
 # company 標記在 sidecar top level（v0.10.1+：中子版分流輸出路徑）
 out = {"fields": fields, "template_type": template_type}

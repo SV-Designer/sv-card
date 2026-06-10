@@ -132,9 +132,10 @@ description: StreetVoice 街聲名片自動化製作（TW 街聲版 + 中子 BVI
 > - `zhongzi-bvi` → 中子 BVI 版（簽呈版型「中子BVI」），用 `SV_TEMPLATE_ZHONGZI` 模板；sidecar 不寫 artifacts 區塊，Step 3 / 4 / 9 自動跳過
 >
 > **`--company` 僅 `--template-type zhongzi-bvi` 時必填**（v0.10.1+）：
-> - `bvi` → 中子創新（BVI）員工，輸出至 `$SV_OUTPUT_BASE_ZHONGZI`（預設 `~/Documents/02_街聲/6 名片/中子`）
-> - `wenhua` → 中子文化股份有限公司員工，輸出至 `$SV_OUTPUT_BASE_ZHONGZI_WENHUA`（預設 `~/Documents/02_街聲/6 名片/中子文化`）
+> - `bvi` → 中子創新（BVI）員工，輸出至 `$SV_OUTPUT_BASE_ZHONGZI`（預設 `~/Documents/02_街聲/6 名片/中子`），名片印「中子創新有限公司」
+> - `wenhua` → 中子文化股份有限公司員工，輸出至 `$SV_OUTPUT_BASE_ZHONGZI_WENHUA`（預設 `~/Documents/02_街聲/6 名片/中子文化`），名片印「中子文化股份有限公司」
 > - 依簽呈「公司」欄位推導：「中子創新（BVI）」→ `bvi`；「中子文化股份有限公司」→ `wenhua`
+> - **`PH_COMPANY` 文字框會被自動替換**（v0.10.2+）：bvi → `中子創新有限公司`；wenhua → `中子文化股份有限公司`
 >
 > init 內部推導：名片用 `PH_PHONE_MOBILE`（空格→dash、開頭 `0` → `+886-`，v0.8.4+）、vCard `mobile`（沿用簽呈原格式）、`vcf-name`（英文名去空格+.vcf）、PH_PHONE_OFFICE。
 > 資料寫入 `/tmp/sv_card_fields.json` sidecar，Step 2/3 自動讀取。腳本印出 `BASENAME=...` 和 `DEST_DIR=...` 給 Step 8 收尾用。

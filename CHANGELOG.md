@@ -6,6 +6,30 @@
 
 ## [Unreleased]
 
+## [0.10.2] — 2026-06-10
+
+### Added
+- **中子版動態公司名 `PH_COMPANY`**：模板 textFrames[4]（原寫死「中子創新有限公司」）已重命名為 `PH_COMPANY`，依 `--company` 自動替換
+  - `--company bvi` → 名片印「中子創新有限公司」（母公司）
+  - `--company wenhua` → 名片印「中子文化股份有限公司」（旗下公司）
+  - 模板：`templates/20260609-王小明_中子BVI.ai`（SRC + REPO 同步完成，留 `.before-rename.bak` 備份）
+  - `card_helper.sh` sidecar 在 `template_type == "zhongzi-bvi" and company in {bvi, wenhua}` 時自動寫入 `fields.PH_COMPANY`
+  - `replace_fields.jsx` 沿用「依名稱找 PH_* 替換」邏輯，**零改動**就支援新欄位
+
+### Changed
+- **SKILL.md** Step 1 `--company` 說明補上 `PH_COMPANY` 自動替換對照
+- **docs/SOP.md** 模板物件命名表加 `PH_COMPANY`、中子分支流程「替換 7 欄位」改為「替換 8 欄位（含 PH_COMPANY 動態公司名）」、已完成歷史新增 v0.10.2
+
+### 設計動機
+- v0.10.1 確認中子版有 BVI / 文化 兩家子公司，但名片上**寫死印「中子創新有限公司」**會讓中子文化員工拿到錯印名片
+- 不分模板（一張範本搞定）原則：用 `PH_COMPANY` placeholder 動態替換，比建兩張 .ai 模板更易維護
+- `replace_fields.jsx` 已用「依名稱找 PH_*」邏輯，新增欄位零 code 改動就支援
+
+### 回歸測試（3 綠）
+- TW 版 sidecar **不應有** `PH_COMPANY`（避免污染 TW 模板）✓
+- 中子 BVI + `--company bvi` → `fields.PH_COMPANY == "中子創新有限公司"` ✓
+- 中子 BVI + `--company wenhua` → `fields.PH_COMPANY == "中子文化股份有限公司"` ✓
+
 ## [0.10.1] — 2026-06-09
 
 ### Added
