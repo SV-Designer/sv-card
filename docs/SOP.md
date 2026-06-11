@@ -16,6 +16,7 @@
 | 「**做名片**」/「**作名片**」/「**我要製作名片**」/「**執行 SV_名片自動化製作**」 | 無指定 → 依簽呈「名片版型」欄位判斷 |
 | 「**做 SV 名片**」/「**幫我做 SV 名片**」 | TW 街聲版 |
 | 「**做中子名片**」 | 中子 BVI 版 |
+| 「**做台灣中子名片**」 | 台灣中子版 |
 
 > **版型交叉檢核**：不論用哪句觸發，一律仍讀簽呈「名片版型」欄位。觸發語有指定版型但與簽呈不符（例：說「做中子名片」但簽呈寫「TW 街聲」）→ 🛑 停下問使用者以哪個為準；觸發語無指定 → 直接採簽呈版型。詳見 [`SKILL.md`](../skill/SKILL.md) 「觸發 + 版型路由」段。
 
@@ -102,6 +103,19 @@ Claude 自動依序：
 ```
 
 > ⚠️ 初期 8 步流程依 memory `feedback_new_card_type_testing` 規則 **每步都要先停下確認**，不可一路衝到底。成功跑 ≥ 2 次後才討論加入自動化白名單。
+
+### 台灣中子版分支（v0.12.0+）
+
+`template_type == "台灣中子"`（簽呈版型欄）時走 `--template-type zhongzi-taiwan`，流程同上中子 BVI 簡化版，差異如下：
+
+- **不需 `--company`**：台灣中子是中子創新旗下台灣子公司，**單一公司**，公司名「台灣中子創新股份有限公司」**靜態寫死於模板**（模板無 `PH_COMPANY` 框，⑥ 只替換 7 欄位）。
+- **專屬模板**：`SV_TEMPLATE_ZHONGZI_TAIWAN`（`templates/20260611-王小明_台灣中子.ai`），設計含 FAX 行（靜態）、僅台北一址。
+- **輸出路徑**：`$SV_OUTPUT_BASE_ZHONGZI_TAIWAN`（預設 `~/Documents/SV-名片/台灣中子`）。
+- email 同為 `@neuin.com`；office 電話/地址與街聲同（模板靜態）；分機照簽呈帶入。
+- 同中子 BVI：跳過 artifacts / QR / upload（card_helper.sh 與 finalize.jsx 一律以「`template_type != tw`」判斷 skip，v0.12.0+ 泛化）。
+- ⚠️ 同屬新款測試階段，初期每步先停下確認。
+
+> 📌 模板製作補記（v0.12.0）：原始範例檔 FAX 行的文字框誤命名為 `PH_PHONE_MOBILE`（與手機框重名），會導致替換時手機號碼被寫進 FAX 行。repo 模板已修正（FAX 框改回靜態無名）。
 
 ---
 
@@ -511,6 +525,7 @@ finalize.jsx 內部行為：
 ### P2 — 需求驅動（等實際 PDF 進來再做）
 
 - [x] ~~中子 BVI 版~~（v0.10.0 完成 + v0.10.1 補強）— 模板 `templates/20260609-王小明_中子BVI.ai`，`--template-type zhongzi-bvi --company {bvi|wenhua}` 走簡化分支（跳過 vCard / QR / 上傳，輸出 4 個檔案，路徑依公司分流）。**初期測試階段**：依 `feedback_new_card_type_testing`，每步先停下確認，跑 ≥ 2 次成功後才討論加入自動化。
+- [x] ~~台灣中子版~~（v0.12.0 完成）— 模板 `templates/20260611-王小明_台灣中子.ai`，`--template-type zhongzi-taiwan`（單一公司，不需 `--company`）走中子簡化分支，輸出至 `~/Documents/SV-名片/台灣中子`。skip 判斷由 `== zhongzi-bvi` 泛化為 `!= tw`（card_helper.sh + finalize.jsx）。**初期測試階段**同上。
 - [ ] **中子版 — 無手機版**：目前只做有手機版，等實際無手機簽呈進來再加（同 TW 版做法，另建 `SV_TEMPLATE_ZHONGZI_NO_MOBILE` 變數）
 - [ ] **CN / EN / Legacy（含色號）版**
       尚無範本，等實際簽呈進來再做。依 memory `feedback_sv_card_decisions` 原則 1 處理。

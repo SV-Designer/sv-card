@@ -1,6 +1,6 @@
 ---
 name: sv-card
-description: StreetVoice 街聲名片自動化製作（TW 街聲版 + 中子 BVI 版，v0.10.0+）。觸發詞：「做名片」/「作名片」/「做 SV 名片」/「做中子名片」/「我要製作名片」/「幫我做 SV 名片」/「執行 SV_名片自動化製作」，並附簽呈 PDF（拖入或路徑）。版型路由：「做 SV 名片」/「幫我做 SV 名片」→ 期望 TW 街聲版；「做中子名片」→ 期望中子 BVI 版；「做名片」/「作名片」/「我要製作名片」/「執行 SV_名片自動化製作」→ 無指定，依簽呈「名片版型」欄位判斷（「TW 街聲」→ TW 全流程；「中子BVI」→ 中子分支，跳過 vCard / QR / 上傳）。觸發語明示版型時仍與簽呈版型交叉檢核，不一致即停下問。CN / EN 版尚未支援。中子版屬新款測試階段，依 memory `feedback_new_card_type_testing` 規則，初期每步驟須先停下確認，不直接走自動流程；成功跑 ≥ 2 次後才討論加入自動化白名單。
+description: StreetVoice 街聲名片自動化製作（TW 街聲版 + 中子 BVI 版 + 台灣中子版，v0.10.0+）。觸發詞：「做名片」/「作名片」/「做 SV 名片」/「做中子名片」/「做台灣中子名片」/「我要製作名片」/「幫我做 SV 名片」/「執行 SV_名片自動化製作」，並附簽呈 PDF（拖入或路徑）。版型路由：「做 SV 名片」/「幫我做 SV 名片」→ 期望 TW 街聲版；「做中子名片」→ 期望中子 BVI 版；「做台灣中子名片」→ 期望台灣中子版；「做名片」/「作名片」/「我要製作名片」/「執行 SV_名片自動化製作」→ 無指定，依簽呈「名片版型」欄位判斷（「TW 街聲」→ TW 全流程；「中子BVI」/「台灣中子」→ 中子分支，跳過 vCard / QR / 上傳）。觸發語明示版型時仍與簽呈版型交叉檢核，不一致即停下問。CN / EN 版尚未支援。中子系列（含台灣中子）屬新款測試階段，依 memory `feedback_new_card_type_testing` 規則，初期每步驟須先停下確認，不直接走自動流程；成功跑 ≥ 2 次後才討論加入自動化白名單。
 ---
 
 # SV 名片自動化製作
@@ -18,6 +18,7 @@ description: StreetVoice 街聲名片自動化製作（TW 街聲版 + 中子 BVI
 | 「**做名片**」/「**作名片**」/「**我要製作名片**」/「**執行 SV_名片自動化製作**」 | 無指定 → 依簽呈「名片版型」欄位判斷 |
 | 「**做 SV 名片**」/「**幫我做 SV 名片**」 | TW 街聲版 |
 | 「**做中子名片**」 | 中子 BVI 版 |
+| 「**做台灣中子名片**」 | 台灣中子版 |
 
 **版型決策（雙重來源交叉檢核，依 `feedback_sv_card_decisions` 降出錯原則）**：
 1. 不論用哪句觸發，**一律照下方「PDF 萃取規則」讀簽呈「名片版型」欄位**（`template_type`）拿到「簽呈實際版型」
@@ -25,7 +26,7 @@ description: StreetVoice 街聲名片自動化製作（TW 街聲版 + 中子 BVI
    - **觸發語無指定**（做名片 / 作名片 / 我要製作名片 / 執行…）→ 直接採用簽呈版型（同現行行為）
    - **觸發語有指定且與簽呈一致** → 走該版型
    - **觸發語有指定但與簽呈不符**（例：使用者說「做中子名片」但簽呈版型欄寫「TW 街聲」）→ 🛑 **停下問使用者以哪個為準**，不要自行猜
-   - 簽呈版型非「TW 街聲」也非「中子BVI」（CN / EN）→ 停下問（未支援）
+   - 簽呈版型非「TW 街聲」、「中子BVI」、「台灣中子」（CN / EN）→ 停下問（未支援）
 
 ## 📜 第一句話（逐字、不要改寫）
 
@@ -58,7 +59,7 @@ description: StreetVoice 街聲名片自動化製作（TW 街聲版 + 中子 BVI
 | `email` | Email（→ `--email`）|
 | `office_ext` | 分機（→ `--office-ext`，null = 簽呈空白，傳 `""`）|
 | `mobile` | 簽呈原格式手機（→ `--mobile`，null = 簽呈空白，傳 `""`）|
-| `template_type` | 版型（v0.10.0+：「TW 街聲」→ `--template-type tw`；「中子BVI」→ `--template-type zhongzi-bvi`；其餘版型停下問）|
+| `template_type` | 版型（v0.10.0+：「TW 街聲」→ `--template-type tw`；「中子BVI」→ `--template-type zhongzi-bvi`；「台灣中子」→ `--template-type zhongzi-taiwan`（v0.12.0+）；其餘版型停下問）|
 | `other_requests` | 「其他需求」欄位純文字 |
 | `form_remark` + `form_remark_is_placeholder` | 「表單註釋」欄位文字，placeholder=true 代表是系統提示文字不是申請人填的 |
 
@@ -67,7 +68,8 @@ description: StreetVoice 街聲名片自動化製作（TW 街聲版 + 中子 BVI
 - **「其他需求」非空且非「請協助送印」「TW」這類常見備註** → 停下問
 - **「表單註釋」`form_remark_is_placeholder=false` 表示申請人實際填了內容** → 停下問
 - **`template_type == "中子BVI"`**（v0.10.0+）→ 走中子分支（傳 `--template-type zhongzi-bvi --company bvi|wenhua`），跳過 Step 3 artifacts、Step 4 place QR、Step 9 upload vCard；**初期每步驟先停下確認**（依 `feedback_new_card_type_testing` 規則，成功跑 ≥ 2 次才討論加入自動化）。**`--company` 依簽呈「公司」欄位推導：「中子創新（BVI）」→ `bvi`；「中子文化股份有限公司」→ `wenhua`**。輸出路徑分流（v0.10.3+ 預設）：bvi → `~/Documents/SV-名片/中子`；wenhua → `~/Documents/SV-名片/中子文化`（可用 `SV_OUTPUT_BASE_ZHONGZI` / `SV_OUTPUT_BASE_ZHONGZI_WENHUA` 在 `~/.config/sv-card/env` 覆寫）
-- **`template_type != "TW 街聲"` 且 != "中子BVI"`**（CN / EN）→ 停下問（未支援）
+- **`template_type == "台灣中子"`**（v0.12.0+）→ 走台灣中子分支（傳 `--template-type zhongzi-taiwan`，**不需 `--company`**），跳過 Step 3 artifacts、Step 4 place QR、Step 9 upload vCard；**初期每步驟先停下確認**（依 `feedback_new_card_type_testing` 規則，成功跑 ≥ 2 次才討論加入自動化）。台灣中子是中子創新旗下台灣子公司，**單一公司、公司名「台灣中子創新股份有限公司」靜態寫死於模板**（無 PH_COMPANY，毋須推導）；員工 email 同為 `@neuin.com`。輸出路徑：`~/Documents/SV-名片/台灣中子`（可用 `SV_OUTPUT_BASE_ZHONGZI_TAIWAN` 在 `~/.config/sv-card/env` 覆寫）
+- **`template_type` 非「TW 街聲」、「中子BVI」、「台灣中子」**（CN / EN）→ 停下問（未支援）
 - **「名片上的姓名」與「申請人」不同**（外部夥伴情境）→ 雖然腳本仍能抽，但要跟使用者確認此為預期
 - **職稱中英文混填**（如「事業發展總監（英文: Business Development Director）」，v0.10.1+）→ **停下問使用者用中文還是英文**，再決定 `--title` 傳哪個值
 - **Email 網域白名單**（v0.10.1+）：`@streetvoice.com`（TW 員工）、`@neuin.com`（中子員工）皆視為正常；其他網域 → 停下問
@@ -77,7 +79,7 @@ description: StreetVoice 街聲名片自動化製作（TW 街聲版 + 中子 BVI
 依 `feedback_sv_card_decisions` 原則 1（新款逐步確認）規則，遇以下狀況**不要照走自動流程**，先停下問使用者：
 - 「其他需求」/ 備註欄出現**過去未碰過的特殊請求**（覆寫姓名、改地址、改 logo、特殊版型等）
 - Email 非 `@streetvoice.com` 也非 `@neuin.com`（v0.10.1+：白名單已含中子員工域名）
-- 版型非「TW 街聲」也非「中子BVI」（CN / EN 版尚未支援）
+- 版型非「TW 街聲」、「中子BVI」、「台灣中子」（CN / EN 版尚未支援）
 - 職稱中英混填（v0.10.1+，例：「事業發展總監（英文: ...）」）
 
 > 已自動處理的分支（不再屬於非常規）：簽呈無分機 → `--office-ext ""`；簽呈無手機 → `--mobile ""`。
@@ -131,8 +133,8 @@ description: StreetVoice 街聲名片自動化製作（TW 街聲版 + 中子 BVI
     --email "<email>" \
     --mobile "<簽呈原格式手機，例如 +886 900 000 000>" \
     --office-ext "<分機，例如 395>" \
-    --template-type "<tw 或 zhongzi-bvi，預設 tw>" \
-    --company "<bvi 或 wenhua，僅 zhongzi-bvi 必填>"
+    --template-type "<tw / zhongzi-bvi / zhongzi-taiwan，預設 tw>" \
+    --company "<bvi 或 wenhua，僅 zhongzi-bvi 必填；zhongzi-taiwan 不傳>"
 ```
 > **`--mobile` / `--office-ext` 為選填**：簽呈空白時傳空字串 `""`（或不傳）。
 > - `--mobile ""` → 自動選無手機版模板（SV_TEMPLATE_NO_MOBILE）、vCard 跳過 TEL CELL
@@ -141,8 +143,9 @@ description: StreetVoice 街聲名片自動化製作（TW 街聲版 + 中子 BVI
 > **`--template-type` 為選填**（v0.10.0+，預設 `tw`）：
 > - `tw`（預設）→ SV 全流程，含 vCard / QR / 上傳
 > - `zhongzi-bvi` → 中子 BVI 版（簽呈版型「中子BVI」），用 `SV_TEMPLATE_ZHONGZI` 模板；sidecar 不寫 artifacts 區塊，Step 3 / 4 / 9 自動跳過
+> - `zhongzi-taiwan` → 台灣中子版（簽呈版型「台灣中子」，v0.12.0+），用 `SV_TEMPLATE_ZHONGZI_TAIWAN` 模板；**不傳 `--company`**；輸出至 `$SV_OUTPUT_BASE_ZHONGZI_TAIWAN`（預設 `~/Documents/SV-名片/台灣中子`）；公司名「台灣中子創新股份有限公司」靜態於模板（無 PH_COMPANY）；同中子 BVI 跳過 Step 3 / 4 / 9
 >
-> **`--company` 僅 `--template-type zhongzi-bvi` 時必填**（v0.10.1+）：
+> **`--company` 僅 `--template-type zhongzi-bvi` 時必填**（v0.10.1+；`zhongzi-taiwan` 單一公司不需 company）：
 > - `bvi` → 中子創新（BVI）員工，輸出至 `$SV_OUTPUT_BASE_ZHONGZI`（v0.10.3+ 預設 `~/Documents/SV-名片/中子`），名片印「中子創新有限公司」
 > - `wenhua` → 中子文化股份有限公司員工，輸出至 `$SV_OUTPUT_BASE_ZHONGZI_WENHUA`（v0.10.3+ 預設 `~/Documents/SV-名片/中子文化`），名片印「中子文化股份有限公司」
 > - 依簽呈「公司」欄位推導：「中子創新（BVI）」→ `bvi`；「中子文化股份有限公司」→ `wenhua`
@@ -171,7 +174,7 @@ $.evalFile(Folder("~").fsName + "/.claude/skills/sv-card/scripts/replace_fields.
 ```
 > 自動讀 sidecar 的 artifacts 區塊（無參數）。
 >
-> **中子版（v0.10.0+）**：腳本偵測 sidecar `template_type == "zhongzi-bvi"` 會印「📋 中子版跳過 artifacts（無 vCard / QR）」並 exit 0。**Step 4（置入 QR）也整個跳過**，直接進 Step 5 自動存檔。
+> **中子系列（v0.10.0+；v0.12.0+ 含台灣中子）**：腳本偵測 sidecar `template_type != "tw"`（即 zhongzi-bvi / zhongzi-taiwan）會印「📋 中子系列跳過 artifacts（無 vCard / QR）」並 exit 0。**Step 4（置入 QR）也整個跳過**，直接進 Step 5 自動存檔。
 
 ### Step 4：置入 QR Code（mcp__illustrator__run）
 ```javascript
@@ -299,6 +302,7 @@ Claude 用此句問使用者（**逐字**，把實際檔名代入）：
 | 模板 .ai（TW 有手機版，預設）| `~/.claude/skills/sv-card/templates/20260522-王小明.ai` |
 | 模板 .ai（TW 無手機版）| `~/.claude/skills/sv-card/templates/20260529-王小明_無手機版.ai`（簽呈無手機時自動選用）|
 | 模板 .ai（中子 BVI 版，v0.10.0+）| `~/.claude/skills/sv-card/templates/20260609-王小明_中子BVI.ai`（簽呈版型「中子BVI」時用 `--template-type zhongzi-bvi`）|
+| 模板 .ai（台灣中子版，v0.12.0+）| `~/.claude/skills/sv-card/templates/20260611-王小明_台灣中子.ai`（簽呈版型「台灣中子」時用 `--template-type zhongzi-taiwan`）|
 | Bash 操作合集 | `~/.claude/skills/sv-card/scripts/card_helper.sh` |
 | vCard + QR + 預處理 | `~/.claude/skills/sv-card/scripts/make_card_artifacts.py` |
 | 欄位替換 + 存檔 | `~/.claude/skills/sv-card/scripts/replace_fields.jsx` |

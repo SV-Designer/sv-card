@@ -6,6 +6,28 @@
 
 ## [Unreleased]
 
+## [0.12.0] — 2026-06-11
+
+### Added
+- **台灣中子版**（中子創新旗下台灣子公司，GAIA／台灣中子創新股份有限公司）
+  - 新版型 `--template-type zhongzi-taiwan`，專屬模板 `templates/20260611-王小明_台灣中子.ai`
+  - **單一公司、不需 `--company`**：公司名「台灣中子創新股份有限公司」靜態寫死於模板（無 `PH_COMPANY`），設計含 FAX 行（靜態）、僅台北一址
+  - 走中子簡化分支：跳過 vCard / QR / 上傳；輸出至 `$SV_OUTPUT_BASE_ZHONGZI_TAIWAN`（預設 `~/Documents/SV-名片/台灣中子`）
+  - 員工 email 同為 `@neuin.com`（已在白名單內）；office 電話 / 地址與街聲同（模板靜態）
+  - 新環境變數：`SV_TEMPLATE_ZHONGZI_TAIWAN`、`SV_OUTPUT_BASE_ZHONGZI_TAIWAN`
+- **觸發語**「**做台灣中子名片**」→ 期望台灣中子版（仍與簽呈版型交叉檢核）
+
+### Changed
+- **跳過 artifacts / 清殘留判斷泛化**：`card_helper.sh` artifacts 子命令與 `finalize.jsx` 清殘留，由原本硬判 `template_type == "zhongzi-bvi"` 改為 `template_type != "tw"`，自動涵蓋 zhongzi-bvi / zhongzi-taiwan 及未來新版型
+- `skill/SKILL.md`、`docs/SOP.md`、`README.md`：版型路由表、PDF 萃取對照、init 參數說明、模板路徑表、已知限制等同步補台灣中子
+
+### Fixed
+- **台灣中子模板 FAX 框誤命名修正**：原始範例檔 FAX 行文字框誤名為 `PH_PHONE_MOBILE`（與手機框重名），替換時會把手機號碼寫進 FAX 行。repo 模板已將 FAX 框改回靜態無名（FAX 為公司固定號碼）
+
+### Notes
+- 台灣中子版屬**新款測試階段**（依 memory `feedback_new_card_type_testing`）：初期每步先停下確認，成功跑 ≥ 2 次後才討論加入自動化白名單。本版已用簽呈（表單號 647 / 劉琪琪）測試 1 次通過（原檔 / JPG / OL-CS6 / 簽呈備份皆正確）
+- 中子系列 PDF（含台灣中子）中文 layer 圖片化，`extract-pdf` 機械萃取可能全 null，欄位以 Claude 視覺讀 PDF 為準
+
 ## [0.11.0] — 2026-06-10
 
 ### Added

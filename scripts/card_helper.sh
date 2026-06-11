@@ -74,6 +74,9 @@ SV_OUTPUT_BASE="${SV_OUTPUT_BASE:-$HOME/Documents/SV-名片}"
 # v0.10.3+：預設改用 ~/Documents/SV-名片/ 子資料夾，跟 TW 版同根（對下載者友善）
 SV_OUTPUT_BASE_ZHONGZI="${SV_OUTPUT_BASE_ZHONGZI:-$HOME/Documents/SV-名片/中子}"
 SV_OUTPUT_BASE_ZHONGZI_WENHUA="${SV_OUTPUT_BASE_ZHONGZI_WENHUA:-$HOME/Documents/SV-名片/中子文化}"
+# 台灣中子版（v0.12.0+，中子創新旗下台灣子公司；單一公司、無 --company 子分流）
+SV_TEMPLATE_ZHONGZI_TAIWAN="${SV_TEMPLATE_ZHONGZI_TAIWAN:-$SV_CARD_SKILL_DIR/templates/20260611-王小明_台灣中子.ai}"
+SV_OUTPUT_BASE_ZHONGZI_TAIWAN="${SV_OUTPUT_BASE_ZHONGZI_TAIWAN:-$HOME/Documents/SV-名片/台灣中子}"
 SV_SIDECAR="${SV_SIDECAR:-/tmp/sv_card_fields.json}"
 
 # 預設模板（TW 有手機版）必存；其餘版型只在 init 真的選到時才檢查
@@ -103,10 +106,11 @@ case "$cmd" in
                 echo "ERROR: 找不到 sidecar: $SV_SIDECAR（需先跑 init）" >&2
                 exit 1
             fi
-            # 中子版跳過 artifacts（無 vCard / QR；v0.10.0+）
+            # 中子系列跳過 artifacts（無 vCard / QR；v0.10.0+）
+            # v0.12.0+：改判「非 tw 一律跳過」，涵蓋 zhongzi-bvi / zhongzi-taiwan 及未來新版型
             tt=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('template_type','tw'))" "$SV_SIDECAR")
-            if [ "$tt" = "zhongzi-bvi" ]; then
-                echo "📋 中子版跳過 artifacts（無 vCard / QR）"
+            if [ "$tt" != "tw" ]; then
+                echo "📋 中子系列跳過 artifacts（無 vCard / QR）"
                 exit 0
             fi
             exec python3 "$SV_CARD_SKILL_DIR/scripts/make_card_artifacts.py" --from "$SV_SIDECAR"
@@ -172,9 +176,9 @@ EOF
 
         # template-type 驗證
         case "$template_type" in
-            tw|zhongzi-bvi) ;;
+            tw|zhongzi-bvi|zhongzi-taiwan) ;;
             *)
-                echo "ERROR: --template-type 只接受 'tw' 或 'zhongzi-bvi'，收到: $template_type" >&2
+                echo "ERROR: --template-type 只接受 'tw'、'zhongzi-bvi' 或 'zhongzi-taiwan'，收到: $template_type" >&2
                 exit 1 ;;
         esac
 
@@ -214,7 +218,7 @@ EOF
             exit 1
         fi
 
-        # 選模板（v0.10.0+ 加中子版分支）
+        # 選模板（v0.10.0+ 加中子版分支；v0.12.0+ 加台灣中子分支）
         if [ "$template_type" = "zhongzi-bvi" ]; then
             template="$SV_TEMPLATE_ZHONGZI"
             if [ ! -f "$template" ]; then
@@ -227,6 +231,19 @@ EOF
             if [ -z "$mobile" ]; then
                 echo "⚠️ 中子版目前僅支援有手機版，但簽呈無手機。" >&2
                 echo "   → 暫以有手機模板繼續，PH_PHONE_MOBILE 會留空字串請手動處理" >&2
+            fi
+        elif [ "$template_type" = "zhongzi-taiwan" ]; then
+            template="$SV_TEMPLATE_ZHONGZI_TAIWAN"
+            if [ ! -f "$template" ]; then
+                echo "ERROR: 找不到台灣中子版模板: $template" >&2
+                echo "  → 請設定 SV_TEMPLATE_ZHONGZI_TAIWAN 環境變數，或執行 install.sh 後重試" >&2
+                exit 1
+            fi
+            echo "📋 使用台灣中子版模板（無 vCard / QR 流程；公司名靜態於模板）"
+            # 台灣中子版同中子版，目前僅支援有手機版
+            if [ -z "$mobile" ]; then
+                echo "⚠️ 台灣中子版目前僅支援有手機版，但簽呈無手機。" >&2
+                echo "   → 暫以有手機模板繼續，PH_PHONE_MOBILE 會留樣本值請手動處理" >&2
             fi
         elif [ -z "$mobile" ]; then
             # TW 無手機版
@@ -243,12 +260,19 @@ EOF
         fi
 
         name_folder="${chinese_full}_${english_name}"
-        # 選輸出 base（v0.10.1+：中子版依 --company 分流）
-        case "$company" in
-            bvi)    output_base="$SV_OUTPUT_BASE_ZHONGZI" ;;
-            wenhua) output_base="$SV_OUTPUT_BASE_ZHONGZI_WENHUA" ;;
-            *)      output_base="$SV_OUTPUT_BASE" ;;  # TW 版預設
-        esac
+        # 選輸出 base
+        #   - 台灣中子版（v0.12.0+）：無 --company，依 template_type 直接分流
+        #   - 中子 BVI 版（v0.10.1+）：依 --company 分流
+        #   - 其餘：TW 版預設
+        if [ "$template_type" = "zhongzi-taiwan" ]; then
+            output_base="$SV_OUTPUT_BASE_ZHONGZI_TAIWAN"
+        else
+            case "$company" in
+                bvi)    output_base="$SV_OUTPUT_BASE_ZHONGZI" ;;
+                wenhua) output_base="$SV_OUTPUT_BASE_ZHONGZI_WENHUA" ;;
+                *)      output_base="$SV_OUTPUT_BASE" ;;  # TW 版預設
+            esac
+        fi
         dest_dir="$output_base/$name_folder"
         today=$(date +%Y%m%d)
         new_file="$dest_dir/${today}-${name_folder}.ai"

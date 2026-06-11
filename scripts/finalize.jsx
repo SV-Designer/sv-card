@@ -26,7 +26,7 @@
     var d = app.activeDocument;
     if (!d) { return "ERROR: no active document"; }
 
-    // 讀 sidecar 拿 template_type（v0.10.3+：中子版要跳過清殘留）
+    // 讀 sidecar 拿 template_type（v0.10.3+：中子版要跳過清殘留；v0.12.0+ 含台灣中子）
     var templateType = "tw";
     try {
         var sf = new File("/tmp/sv_card_fields.json");
@@ -41,10 +41,11 @@
     } catch (e) {}
 
     // 1. 清殘留（位置或尺寸超出 1000 的物件，通常是 SVG 匯入殘留）
-    //    v0.10.3+：中子版跳過 — 中子模板有 16383×16383 clip group 內含 PH_*，
-    //    清殘留會連帶刪掉 7 個 PH_* TextFrame 造成名片資訊全失
+    //    v0.10.3+：中子系列跳過 — 中子模板有 16383×16383 clip group 內含 PH_*，
+    //    清殘留會連帶刪掉 PH_* TextFrame 造成名片資訊全失；且中子系列跳過 Step 3/4
+    //    本就無 SVG 殘留可清。v0.12.0+ 改判「僅 tw 才清」，涵蓋 zhongzi-bvi / zhongzi-taiwan
     var removedCount = 0;
-    if (templateType !== "zhongzi-bvi") {
+    if (templateType === "tw") {
         var top = d.layers[0].pageItems;
         var toRemove = [];
         for (var i = 0; i < top.length; i++) {
