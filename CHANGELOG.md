@@ -6,6 +6,12 @@
 
 ## [Unreleased]
 
+## [0.14.1] — 2026-06-11
+
+### Changed
+- **規則內化、skill 改為自包含**：把「新版型測試 → 畢業規則」（新款逐步確認 + 成功跑 ≥ 2 次才入自動化白名單）與「優化優先降出錯、非省 token」兩原則，從外部 memory 內化進 `docs/SOP.md`（新增「🆕 新版型測試 → 畢業規則」節）。
+- `skill/SKILL.md` 與 `docs/SOP.md` 原以 `memory feedback_*` 之名引用規則的 4 處，全部改為指向 SOP 自身章節 —— **skill 自此零外部 memory 引用、完全自包含**。
+
 ## [0.14.0] — 2026-06-11
 
 ### Changed
