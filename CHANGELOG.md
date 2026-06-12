@@ -6,6 +6,16 @@
 
 ## [Unreleased]
 
+## [0.16.2] — 2026-06-12
+
+### Changed
+- **降出錯三項優化**（三張測試名片暴露的真實出錯點）：
+  - **#1 中子 PDF 全 null 明確標記**：中子系列 PDF 中文 layer 圖片化（CID 編碼），`extract_signoff_fields.py` 機械萃取全 None。改為偵測關鍵欄位全 None → stderr 印 `⚠️` 提示「走純視覺萃取 + 人工確認」，不再每次困惑「PDF 壞了還是圖片化」。`skill/SKILL.md`「Claude 必看項」同步補說明。
+  - **#2 env 模板路徑解耦**：`~/.config/sv-card/env` 不再寫死 `SV_TEMPLATE`（install.sh 預設留註解、用 card_helper 內建預設常數 `SV_TEMPLATE_DEFAULT`）；card_helper 對指向不存在的 `SV_TEMPLATE` 改 **fallback 內建預設 + 警告**而非中止（避免 extract-pdf 等不需模板的子命令被擋——本版前發生過）。本機 env 的 `SV_TEMPLATE` 行已移除、install.sh `default_template` 修正為 20260612。
+  - **#3 finalize 收尾關閉暫存文件**：`finalize.jsx` 末尾 close OL 暫存文件，減少連續做名片時 Illustrator 殘留累積（init `open` 被既有文件攔截的根因之一）。
+- **#5 第一句話文案統一**：`docs/SOP.md` 3 處「好準備執行，illustator請確保為關閉狀態」統一為 SKILL 版「好的，準備開始！請完全關閉 illustrator (⌘Q)」。
+- **待辦清理**（使用者拍板）：中子無手機版 → 暫不做（未來真有再主動提出）；CN / EN / Legacy 版 → 不做、完全忽略，自 SOP 待辦移除。
+
 ## [0.16.1] — 2026-06-12
 
 ### Changed

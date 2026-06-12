@@ -66,7 +66,8 @@ set -e
 
 # 可由環境變數或 ~/.config/sv-card/env 覆寫
 SV_CARD_SKILL_DIR="${SV_CARD_SKILL_DIR:-$HOME/.claude/skills/sv-card}"
-SV_TEMPLATE="${SV_TEMPLATE:-$SV_CARD_SKILL_DIR/templates/20260612-王小明.ai}"
+SV_TEMPLATE_DEFAULT="$SV_CARD_SKILL_DIR/templates/20260612-王小明.ai"
+SV_TEMPLATE="${SV_TEMPLATE:-$SV_TEMPLATE_DEFAULT}"
 SV_TEMPLATE_NO_MOBILE="${SV_TEMPLATE_NO_MOBILE:-$SV_CARD_SKILL_DIR/templates/20260529-王小明_無手機版.ai}"
 SV_TEMPLATE_ZHONGZI="${SV_TEMPLATE_ZHONGZI:-$SV_CARD_SKILL_DIR/templates/20260612-王小明_中子BVI.ai}"
 # v0.14.0+：SV_OUTPUT_BASE 改為「名片根目錄」（~/Documents/名片），各版型在其下接子資料夾。
@@ -82,11 +83,19 @@ SV_TEMPLATE_ZHONGZI_TAIWAN="${SV_TEMPLATE_ZHONGZI_TAIWAN:-$SV_CARD_SKILL_DIR/tem
 SV_OUTPUT_BASE_ZHONGZI_TAIWAN="${SV_OUTPUT_BASE_ZHONGZI_TAIWAN:-$SV_OUTPUT_BASE/台灣中子}"
 SV_SIDECAR="${SV_SIDECAR:-/tmp/sv_card_fields.json}"
 
-# 預設模板（TW 有手機版）必存；其餘版型只在 init 真的選到時才檢查
+# 預設模板（TW 有手機版）防呆（v0.16.2）：env 覆寫成不存在的舊檔名時（例如換模板
+# 檔名後 ~/.config/sv-card/env 仍寫死舊路徑），fallback 內建預設並警告，而非直接中止
+# —— 否則連 extract-pdf 這類不需模板的子命令也會被擋。內建預設也找不到才報錯。
 if [ ! -f "$SV_TEMPLATE" ]; then
-    echo "ERROR: 找不到模板 .ai 檔: $SV_TEMPLATE" >&2
-    echo "  → 請執行 install.sh，或設定 SV_TEMPLATE 環境變數指向實際路徑" >&2
-    exit 1
+    if [ -f "$SV_TEMPLATE_DEFAULT" ]; then
+        echo "⚠️ SV_TEMPLATE 指向不存在的檔（$SV_TEMPLATE），改用內建預設：$SV_TEMPLATE_DEFAULT" >&2
+        echo "   建議移除 ~/.config/sv-card/env 內寫死的 SV_TEMPLATE 行，改用內建預設免維護。" >&2
+        SV_TEMPLATE="$SV_TEMPLATE_DEFAULT"
+    else
+        echo "ERROR: 找不到模板 .ai 檔（含內建預設）: $SV_TEMPLATE" >&2
+        echo "  → 請執行 install.sh 重建 symlink" >&2
+        exit 1
+    fi
 fi
 
 cmd="$1"

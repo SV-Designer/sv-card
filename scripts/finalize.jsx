@@ -77,6 +77,12 @@
     olOpts.compatibility = Compatibility.ILLUSTRATOR16;
     d.saveAs(new File(olTmp), olOpts);
 
+    // v0.16.2：收尾後關閉此暫存文件（OL 版已存磁碟，Step 8 用 bash mv 搬走）。
+    // 避免連續做名片時 Illustrator 殘留文件累積 → 下一張 init 的 open 被既有文件攔截
+    // （current document 變成別的檔）。只關自己這份，不動使用者其他開著的工作檔。
+    var closed = "no";
+    try { d.close(SaveOptions.DONOTSAVECHANGES); closed = "yes"; } catch (e) {}
+
     return "OK removed=" + removedCount + " template=" + templateType
-        + " original=" + originalTmp + " ol=" + olTmp;
+        + " original=" + originalTmp + " ol=" + olTmp + " closed=" + closed;
 })();

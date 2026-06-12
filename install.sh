@@ -208,7 +208,7 @@ echo "⚙️  寫入使用者偏好 $CONFIG_FILE ..."
 mkdir -p "$CONFIG_DIR"
 
 default_output="$HOME/Documents/名片"  # v0.14.0+：名片根目錄；TW 版自動接 /SV 子夾
-default_template="$SKILL_DIR/templates/20260522-王小明.ai"
+default_template="$SKILL_DIR/templates/20260612-王小明.ai"
 
 # 若已有舊設定，沿用為新預設
 if [ -f "$CONFIG_FILE" ]; then
@@ -230,11 +230,18 @@ else
     confirmed=1
 fi
 
+# SV_TEMPLATE：只在使用者自訂了「非預設」模板時才寫死；用預設則留註解，靠 card_helper
+# 內建預設（換模板檔名後免改 env，避免 env 寫死舊路徑造成 fallback；v0.16.2）
+if [ "$tpl" = "$default_template" ]; then
+    tpl_line='# SV_TEMPLATE="<自訂模板路徑；留註解則用 card_helper 內建預設>"'
+else
+    tpl_line="SV_TEMPLATE=\"$tpl\""
+fi
 cat > "$CONFIG_FILE" <<EOF
 # sv-card 使用者偏好（由 install.sh 產生，可手動編輯）
 # card_helper.sh 啟動時會 source 此檔
 SV_OUTPUT_BASE="$out_base"
-SV_TEMPLATE="$tpl"
+$tpl_line
 SV_OUTPUT_CONFIRMED=$confirmed
 EOF
 echo "  ✅ 寫入 ${CONFIG_FILE}（SV_OUTPUT_CONFIRMED=$confirmed）"

@@ -152,6 +152,17 @@ def main():
     fields = extract_fields(sys.argv[1])
     print(json.dumps(fields, ensure_ascii=False, indent=2))
 
+    # 全 null 偵測（v0.16.2）：中子系列 PDF 的中文 layer 常被圖片化（CID 編碼），
+    # pdfplumber 抓不到中文錨點 → 關鍵欄位全 None。明確標記，提醒走純視覺萃取流程，
+    # 避免每次中子 PDF 都困惑「是 PDF 壞了還是圖片化」。
+    key_fields = ["form_no", "card_name_raw", "email", "template_type"]
+    if all(fields.get(k) is None for k in key_fields):
+        sys.stderr.write(
+            "⚠️ 關鍵欄位全部抓不到 —— 疑似中文圖片化 PDF（中子 BVI / 台灣中子常見）。\n"
+            "   機械萃取對此類 PDF 失效屬正常；請以 Claude 視覺萃取（Read PDF）為準，\n"
+            "   並逐欄與使用者人工確認（此時失去機械雙重交叉檢核）。\n"
+        )
+
 
 if __name__ == "__main__":
     main()

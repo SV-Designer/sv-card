@@ -64,6 +64,7 @@ description: StreetVoice 街聲名片自動化製作（TW 街聲版 + 中子 BVI
 | `form_remark` + `form_remark_is_placeholder` | 「表單註釋」欄位文字 — **內容可完全忽略**，不作為停下判斷（腳本仍抽出但不採用）|
 
 **Claude 必看項**（腳本抓不到的判斷）：
+- **機械萃取全 null（關鍵欄位全抓不到）**（v0.16.2）→ 中子系列 PDF 中文 layer 圖片化（CID 編碼）常見，`extract-pdf` 會印 `⚠️` 警告。此時**以 Claude 視覺萃取（Read PDF）為準、逐欄與使用者人工確認**（失去機械雙重檢核），不可照單全收直接跑。
 - **中英文 typo**：腳本照字面抓（如 `Strong Wo` 會原樣輸出），Claude 看 PDF 視覺判斷是否為 typo → 停下問
 - **「其他需求」欄位通常為空白**；若有「請協助送印」「TW」以外的特殊備註 → 停下問
 - **「表單註釋」欄位內容可完全忽略** —— 不論 placeholder 與否，皆不作為停下判斷
