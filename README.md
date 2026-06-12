@@ -45,7 +45,7 @@ Claude 會自動：
 | 狀況 | 怎麼處理 |
 |---|---|
 | 安裝過程卡住 | 直接告訴 Claude 卡在哪一步，它會自己處理 |
-| 做名片時 Illustrator 沒開起來 | 第一次跑時 Claude 會說「請確保 illustator 為關閉狀態」，先把 Illustrator 關掉再重觸發 |
+| 做名片時 Illustrator 沒開起來 | 第一次跑時 Claude 會說「好的，準備開始！請完全關閉 illustrator (⌘Q)」，先把 Illustrator 關掉（⌘Q）再重觸發 |
 | 簽呈 PDF 資料萃取錯了 | 直接告訴 Claude「職稱應該是 XXX」，它會重做 |
 | 想換名片存放路徑 | 編輯 `~/.config/sv-card/env`，改 `SV_OUTPUT_BASE="你的新路徑"` |
 | 想找以前做過的名片 | 都在 `~/Documents/名片/SV/`（或你自己設的路徑）內，依中文姓名分資料夾 |
