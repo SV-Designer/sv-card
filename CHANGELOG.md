@@ -6,6 +6,16 @@
 
 ## [Unreleased]
 
+## [0.17.0] — 2026-06-12
+
+### Added
+- **經典復刻款 BVI 版 template 納入 repo（測試中，未畢業）**：`templates/20260612-王小明_經典款.ai`（雙面卡、米褐色系）。`docs/SOP.md` 新增「經典復刻款 BVI 版分支」節，完整記錄此款專屬處理：
+  - 框名英文化 + 雙面同名框加 `_F`/`_B` 區分（`PH_COMPANY_EN_F`/`_B`、`PH_PHONE_MOBILE_F`/`_B`），職稱框改 `PH_TITLE`/`PH_TITLE_EN`。
+  - 專屬 SOP 微調：省略 vCard/QR、存 **PNG-24 2000×668**（PIL 去 alpha；**有改色合白底 / 無改色合灰底 K70**）、`PH_COMPANY`/`PH_COMPANY_EN` 預設值與切換規則、其他需求備註顏色 → 改底色、出檔前 GATE「請確認資訊**及配色**無誤」。
+  - 配色 SOP：底色×2（正面 PathItem + 背面 GroupItem 兩種結構）→ 備註色；`PH_COMPANY_EN_F` 備註色 / `_B` 白（避免米褐底隱形）；文字底色 + 其餘文字 → 白；**描邊只改原本有 stroke 者、保留原粗細**。
+  - 實作坑記錄：`MRAP`（填值後設色需 close+重開刷新）、文字 stroke 大量操作易斷線（分小批 + 保前景）、中文路徑 saveAs 先 /tmp 再 mv。
+  - 各版型畢業狀態表新增此款（測試中，表單 646/White Chen 第 1 次跑通，需第 2 次才畢業）。
+
 ## [0.16.2] — 2026-06-12
 
 ### Changed
