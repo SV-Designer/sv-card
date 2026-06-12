@@ -309,7 +309,9 @@ sys.path.insert(0, os.environ["SV_CARD_SCRIPT_DIR"])
 from company_config import phone
 
 mobile_vcard   = os.environ["MOBILE"]
-office_ext     = os.environ["OFFICE_EXT"]
+# 分機統一去掉開頭的 #（簽呈填法不一致：有人填 402、有人填 #321；v0.16.1）
+# 新版分機框 PH_PHONE_EXT = "#" + ext，若 ext 已含 # 會變 ##321，故先 strip
+office_ext     = os.environ["OFFICE_EXT"].strip().lstrip("#")
 en             = os.environ["EN"]
 template_type  = os.environ["TEMPLATE_TYPE"]
 company        = os.environ["COMPANY"]
@@ -394,21 +396,39 @@ PYEOF
             echo "⚠️ Illustrator 已在運行，open 可能被歡迎頁攔截。建議冷啟動。"
         fi
 
+        target_doc="${today}-${name_folder}.ai"
         open -a "Adobe Illustrator" "$new_file"
-        echo "✅ open 已發送，輪詢 doc 就緒中..."
+        echo "✅ open 已發送，輪詢 doc 就緒中（目標：$target_doc）..."
 
+        # v0.16.1+：必須「current document == 目標檔」才算就緒，不再「有 doc 就當成功」。
+        # Illustrator 已運行時 open 常被既有文件攔截（current document 會是使用者開著的
+        # 別的檔），若直接往下替換會改錯文件。偵測到「有 doc 但非目標」持續數秒即判定
+        # 攔截（背景 throttle 下 open -a / osascript open 都不會自己切 current，實測無效，
+        # 只有 MCP app.open 會 bringToFront 可靠生效），不傻等滿 60 秒；改印 NEEDS_MCP_OPEN=1
+        # 交由流程（SKILL Step 1→2 之間）用 MCP app.open 強制開啟目標檔再繼續。
+        name=""
+        mismatch=0
         for i in $(seq 1 60); do
             sleep 1
             name=$(osascript -e 'tell application "Adobe Illustrator" to if (count of documents) > 0 then return name of current document' 2>/dev/null || echo "")
-            if [ -n "$name" ]; then
+            if [ "$name" = "$target_doc" ]; then
                 echo "✅ ${i}s: doc=$name"
                 echo "BASENAME=${today}-${name_folder}"
                 echo "DEST_DIR=$dest_dir"
                 exit 0
             fi
+            [ -n "$name" ] && mismatch=$((mismatch + 1))
+            [ "$mismatch" -ge 4 ] && break
         done
-        echo "❌ 60s 內 Illustrator 未就緒" >&2
-        exit 1
+
+        # 未切到目標檔（攔截或未就緒）— 檔案已建好，交由流程用 MCP app.open 修復
+        echo "⚠️ open 未就緒：current document=「${name:-（無）}」≠ 目標「$target_doc」" >&2
+        echo "   （Illustrator 已運行時 open 易被既有文件攔截）需用 MCP app.open 強制開啟目標檔：" >&2
+        echo "   $new_file" >&2
+        echo "BASENAME=${today}-${name_folder}"
+        echo "DEST_DIR=$dest_dir"
+        echo "NEEDS_MCP_OPEN=1"
+        exit 0
         ;;
 
     save-original)

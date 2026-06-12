@@ -17,7 +17,8 @@ import sys
 import re
 import json
 import unicodedata
-import pdfplumber
+# pdfplumber 改 lazy import（在 extract_fields 內）：讓純函式 parse_ext_and_mobile
+# 可被回歸測試 import 而不需安裝 pdfplumber（v0.16.1）
 
 # 常見複姓（兩字）— 涵蓋台灣常見即可，其餘 fallback 取單字
 COMPOUND_SURNAMES_CN = {
@@ -59,7 +60,26 @@ def normalize_placeholder(s):
     return unicodedata.normalize("NFKC", s)
 
 
+def parse_ext_and_mobile(text):
+    """從簽呈全文抽「室內分機」與「個人手機號碼」（同一行兩欄）。
+
+    手機改用 [^\\n]*（抓整行剩餘），避免「+886 909 050 269」這種含空格的
+    號碼被舊版 \\S* 在第一個空格處截斷成「+886」（v0.16.1 修）。
+    分機保留原樣（可能含 #，由 card_helper.sh 消費端統一去 #）。
+    兩欄皆可空白 → 回 None。回 (office_ext, mobile)。
+    """
+    m = re.search(
+        r"名片上的室內分機[ \t]+(.*?)名片上的個人手機號碼[ \t]*([^\n]*)", text
+    )
+    if not m:
+        return None, None
+    ext_raw = m.group(1).strip()
+    mob = m.group(2).strip()
+    return (ext_raw or None), (mob or None)
+
+
 def extract_fields(pdf_path):
+    import pdfplumber  # lazy（見檔頭說明）
     with pdfplumber.open(pdf_path) as pdf:
         page = pdf.pages[0]
         raw_text = page.extract_text() or ""
@@ -101,15 +121,8 @@ def extract_fields(pdf_path):
 
     # 分機 + 手機（同一行兩欄；分機 / 手機都可能空白）
     # 全檔通則（v0.8.9）：欄位 label 與內容之間用 [ \t] 不用 \s，避免欄位空白時跨行誤抓
-    # （v0.8.7 先在「手機後」加此保護，v0.8.9 推廣到所有欄位 regex）
-    m = re.search(r"名片上的室內分機[ \t]+(.*?)名片上的個人手機號碼[ \t]*(\S*)", text)
-    if m:
-        ext_raw = m.group(1).strip()
-        out["office_ext"] = ext_raw if ext_raw else None
-        mob = m.group(2).strip()
-        out["mobile"] = mob if mob else None
-    else:
-        out["office_ext"] = out["mobile"] = None
+    # 手機抽取見 parse_ext_and_mobile（v0.16.1：改 [^\n]* 修含空格號碼被截斷）
+    out["office_ext"], out["mobile"] = parse_ext_and_mobile(text)
 
     m = re.search(r"名片版型[ \t]+(.+?)(?:\n|$)", text)
     out["template_type"] = m.group(1).strip() if m else None

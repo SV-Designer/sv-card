@@ -6,6 +6,20 @@
 
 ## [Unreleased]
 
+## [0.16.1] — 2026-06-12
+
+### Changed
+- **觸發詞精簡為 4 個**（`skill/SKILL.md` + `docs/SOP.md` + `README.md`）：核心「做名片」（無指定 → 簽呈「名片版型」欄位自動判斷）+ 三個指定版型講法「做 SV 名片」（TW 街聲）/「做中子名片」（中子 BVI）/「做台灣中子名片」（台灣中子）。移除冗餘同義詞「作名片」「我要製作名片」「幫我做 SV 名片」「執行 SV_名片自動化製作」。版型交叉檢核行為不變（指定版型與簽呈不符仍停下問）。
+- **MCP 步驟前的 dock 提示文案統一**（`skill/SKILL.md`）：改為逐字「📌 點進 Illustrator 並切回這裡，以便繼續！」。
+
+### Fixed
+- **init 開檔被攔截卻謊報就緒**（`scripts/card_helper.sh` + `skill/SKILL.md`）：Illustrator 已運行時 `open` 常被既有文件攔截，`current document` 是別的檔（如使用者開著的工作檔），但舊輪詢只檢查「有 doc 就成功」，會往下替換到**錯誤的文件**。改為必須 `current document == 目標檔名` 才算就緒；偵測到「有 doc 但非目標」數秒即判定攔截（背景 throttle 下 `open -a` / `osascript open` 都不會自己切 current，**實測只有 MCP `app.open` 可靠**），印 `NEEDS_MCP_OPEN=1`，由流程在 Step 2 前用 MCP `app.open` 強制開啟目標檔並確認 `activeDocument.name` 後才替換。實機在第 3 張測試名片重現並修復。
+- **手機號碼含空格被截斷**（`extract_signoff_fields.py`）：簽呈手機「+886 909 050 269」舊版 regex 用 `\S*` 在第一個空格處截成「+886」。改用 `[^\n]*` 抓整行剩餘，完整保留含空格號碼。手機/分機解析抽成純函式 `parse_ext_and_mobile`（`pdfplumber` 改 lazy import，讓純函式可被測試 import 而免裝套件）。實機驗證：表單 552 重萃取得完整 `+886 909 050 269`。
+- **分機含 `#` 會變雙 `#`**（`scripts/card_helper.sh`）：簽呈分機填法不一致（有人填 `402`、有人填 `#321`），新版分機框 `PH_PHONE_EXT = "#" + ext` 遇 `#321` 會產生 `##321`。init 改 `office_ext.strip().lstrip("#")` 統一去開頭 `#`，未來不必人工處理。
+
+### Added
+- **回歸測試 `tests/test_field_logic.py`**（純函式、不需 pdfplumber）：覆蓋上述兩修正 —— 含空格手機完整抓取、手機/分機空白、分機去 `#` 共 8 個 case；`smoke.sh` 新增 Phase 5 必跑。
+
 ## [0.16.0] — 2026-06-12
 
 ### Changed

@@ -106,7 +106,7 @@ Claude 會自動：
 
 6. **重啟後再驗證**：請使用者跟你說「`mcp__illustrator__run` 工具存在嗎？」你可用 ToolSearch 確認。沒有的話，可能是 `~/.claude.json` 寫入位置不對（user-level vs project-level），改寫入 project-level 看看
 
-7. **完成**：告訴使用者「現在可以對 Claude Code 說『幫我做 SV 名片』+ 附簽呈 PDF 就會觸發了。首次製作時會引導確認名片存放位置。」
+7. **完成**：告訴使用者「現在可以對 Claude Code 說『做名片』+ 附簽呈 PDF 就會觸發了（想指定版型可說『做 SV 名片 / 做中子名片 / 做台灣中子名片』）。首次製作時會引導確認名片存放位置。」
 
 ### 常見錯誤 & 修法
 

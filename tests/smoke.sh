@@ -82,6 +82,15 @@ else
     echo "  ⏭️  python3 jsonschema 未安裝（跑 pip3 install jsonschema，CI 上會自動裝）"
 fi
 
+# ─── Phase 5: 欄位解析邏輯（分機去# / 手機不截斷）──────────────
+echo
+echo "📋 Phase 5: 欄位解析邏輯（純函式，不需 pdfplumber）"
+if python3 tests/test_field_logic.py; then
+    :
+else
+    fail=1
+fi
+
 # ─── 結果 ──────────────────────────────────────────────────────
 echo
 if [ $fail -eq 0 ]; then
