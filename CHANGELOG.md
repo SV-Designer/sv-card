@@ -6,6 +6,33 @@
 
 ## [Unreleased]
 
+## [0.19.0] — 2026-06-22
+
+### Added
+- **模板字體包 `fonts/` + install.sh 自動安裝**：收錄全部 5 個模板用到的非系統字體（FakePearl-SemiBold、Questrial-Regular、rounded-mgenplus-1cp-regular、Noto Sans CJK TC/SC 各 weight；HelveticaNeue 為 macOS 內建故未收）。`install.sh`（新增 2.6 段）安裝時自動把 `fonts/` 複製到 `~/Library/Fonts/`（idempotent），有新字體則提示重開 Illustrator。皆免費可散布字體（OFL / 免費授權），清單見 `fonts/README.txt`。
+- **經典復刻款 BVI 半自動分支 `--template-type classic-bvi`（測試中）**：`card_helper.sh` 自動填 11 個專屬框（含雙面 `_F`/`_B`），公司中英依 `--company bvi|wenhua|taiwan` 分支，分機 `ext.NNN`、正面手機本地分組 / 背面 `Mobile: +886-…`、英文職稱新增 `--title-en`。配色 + 收尾仍人工：新增 `finalize-classic` 子命令出 **PNG-24**（2000×668，PIL 合底色：改色→白底 / 無改色→灰底 K70）。依 SOP「新版型 ≥ 2 次成功才畢業」，此分支尚在測試、未納入白名單。
+  - 模板更新並改名 `20260612-… → 20260622-名片模版_經典款.ai`（編輯日期）：加寬 `PH_COMPANY` 框以容下台灣中子 12 字全名「台灣中子創新股份有限公司」（原框僅容 BVI 8 字名）。同步更新 `SV_TEMPLATE_CLASSIC` 預設、`install.sh` 完整性檢查、`docs/SOP.md` 之檔名。
+
+### Fixed
+- **經典款遺失字體導致文字框鎖死無法編輯**：缺 Questrial 等字體時，Illustrator 會鎖住「使用遺失字體的文字框」使 `tf.contents=` 改值無效（看似 replaced 成功但畫面沒變）。透過字體包 + install.sh 自動安裝解決；`docs/SOP.md` 經典款「實作已知坑」補記此問題與解法。
+
+## [0.18.0] — 2026-06-22
+
+### Changed
+- **無手機版模板更新為新電話框排版**：以 `templates/20260622-王小明_無手機版.ai` 取代舊 `20260529-王小明_無手機版.ai`。新模板同有手機三版設計——公司電話 `+886-2-2741-7065` 靜態文字框、分機獨立框 `PH_PHONE_EXT`（值 = `#`+分機）。
+  - `card_helper.sh`：無手機版分支 `legacy_office` 由 `1` 改 `0`，sidecar 改寫 `PH_PHONE_EXT`（不再用合成框 `PH_PHONE_OFFICE`）。`legacy_office=1` / `PH_PHONE_OFFICE` 分支已無模板使用，程式保留作向後相容。
+  - 同步更新 `SV_TEMPLATE_NO_MOBILE` 預設路徑、`install.sh` 模板完整性檢查清單、`SKILL.md`、`docs/SOP.md` 之檔名與 legacy 說明。
+- **vCard 手機格式 + TEL 排序對齊通訊錄匯出版**（`make_vcard.py`）：
+  - 手機 CELL 改用本地分組格式 `09XX-XXX-XXX`（新增 `format_mobile_local()`，例 `0909-050269` → `0909-050-269`；帶 `+886` 國碼會先還原成本地 0 開頭；非台灣手機則保留原字串不誤套）。
+  - TEL 行排序由「公司電話 → 傳真 → 手機」改為「**公司電話 → 手機 → 傳真**」。
+- **模板檔名統一為「編輯日期-名片模版_版型」**（完稿輸出檔命名不受影響，仍為 `{今天}-{中文名}_{英文名}`，由 `card_helper.sh` 獨立生成）：
+  - `20260612-王小明.ai` → `20260612-名片模版_TW 街聲.ai`
+  - `20260622-王小明_無手機版.ai` → `20260622-名片模版_TW 街聲（無手機）.ai`
+  - `20260612-王小明_中子BVI.ai` → `20260612-名片模版_中子BVI.ai`
+  - `20260612-王小明_台灣中子.ai` → `20260612-名片模版_台灣中子.ai`
+  - `20260612-王小明_經典款.ai` → `20260612-名片模版_經典款.ai`
+  - 同步更新所有引用：`card_helper.sh`（`SV_TEMPLATE*` 預設）、`install.sh`（模板完整性檢查）、`SKILL.md`、`docs/SOP.md`、`README.md`。
+
 ## [0.17.4] — 2026-06-12
 
 ### Fixed

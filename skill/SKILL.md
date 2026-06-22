@@ -310,10 +310,10 @@ Claude 用此句問使用者（**逐字**，把實際檔名代入）：
 
 | 用途 | 路徑 |
 |---|---|
-| 模板 .ai（TW 有手機版，預設）| `~/.claude/skills/sv-card/templates/20260612-王小明.ai` |
-| 模板 .ai（TW 無手機版）| `~/.claude/skills/sv-card/templates/20260529-王小明_無手機版.ai`（簽呈無手機時自動選用）|
-| 模板 .ai（中子 BVI 版，v0.10.0+）| `~/.claude/skills/sv-card/templates/20260612-王小明_中子BVI.ai`（簽呈版型「中子BVI」時用 `--template-type zhongzi-bvi`）|
-| 模板 .ai（台灣中子版，v0.12.0+）| `~/.claude/skills/sv-card/templates/20260612-王小明_台灣中子.ai`（簽呈版型「台灣中子」時用 `--template-type zhongzi-taiwan`）|
+| 模板 .ai（TW 有手機版，預設）| `~/.claude/skills/sv-card/templates/20260612-名片模版_TW 街聲.ai` |
+| 模板 .ai（TW 無手機版）| `~/.claude/skills/sv-card/templates/20260622-名片模版_TW 街聲（無手機）.ai`（簽呈無手機時自動選用；v0.18.0 起改新分機框排版）|
+| 模板 .ai（中子 BVI 版，v0.10.0+）| `~/.claude/skills/sv-card/templates/20260612-名片模版_中子BVI.ai`（簽呈版型「中子BVI」時用 `--template-type zhongzi-bvi`）|
+| 模板 .ai（台灣中子版，v0.12.0+）| `~/.claude/skills/sv-card/templates/20260612-名片模版_台灣中子.ai`（簽呈版型「台灣中子」時用 `--template-type zhongzi-taiwan`）|
 | Bash 操作合集 | `~/.claude/skills/sv-card/scripts/card_helper.sh` |
 | vCard + QR + 預處理 | `~/.claude/skills/sv-card/scripts/make_card_artifacts.py` |
 | 欄位替換 + 存檔 | `~/.claude/skills/sv-card/scripts/replace_fields.jsx` |

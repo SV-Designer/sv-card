@@ -66,10 +66,10 @@ set -e
 
 # 可由環境變數或 ~/.config/sv-card/env 覆寫
 SV_CARD_SKILL_DIR="${SV_CARD_SKILL_DIR:-$HOME/.claude/skills/sv-card}"
-SV_TEMPLATE_DEFAULT="$SV_CARD_SKILL_DIR/templates/20260612-王小明.ai"
+SV_TEMPLATE_DEFAULT="$SV_CARD_SKILL_DIR/templates/20260612-名片模版_TW 街聲.ai"
 SV_TEMPLATE="${SV_TEMPLATE:-$SV_TEMPLATE_DEFAULT}"
-SV_TEMPLATE_NO_MOBILE="${SV_TEMPLATE_NO_MOBILE:-$SV_CARD_SKILL_DIR/templates/20260529-王小明_無手機版.ai}"
-SV_TEMPLATE_ZHONGZI="${SV_TEMPLATE_ZHONGZI:-$SV_CARD_SKILL_DIR/templates/20260612-王小明_中子BVI.ai}"
+SV_TEMPLATE_NO_MOBILE="${SV_TEMPLATE_NO_MOBILE:-$SV_CARD_SKILL_DIR/templates/20260622-名片模版_TW 街聲（無手機）.ai}"
+SV_TEMPLATE_ZHONGZI="${SV_TEMPLATE_ZHONGZI:-$SV_CARD_SKILL_DIR/templates/20260612-名片模版_中子BVI.ai}"
 # v0.14.0+：SV_OUTPUT_BASE 改為「名片根目錄」（~/Documents/名片），各版型在其下接子資料夾。
 #   - TW 街聲版 → $SV_OUTPUT_BASE/SV（SV 子夾只在真的做 TW 版時才建）
 #   - 中子各版 → $SV_OUTPUT_BASE/{中子,中子文化,台灣中子}
@@ -79,8 +79,11 @@ SV_OUTPUT_BASE="${SV_OUTPUT_BASE:-$HOME/Documents/名片}"
 SV_OUTPUT_BASE_ZHONGZI="${SV_OUTPUT_BASE_ZHONGZI:-$SV_OUTPUT_BASE/中子}"
 SV_OUTPUT_BASE_ZHONGZI_WENHUA="${SV_OUTPUT_BASE_ZHONGZI_WENHUA:-$SV_OUTPUT_BASE/中子文化}"
 # 台灣中子版（v0.12.0+，中子創新旗下台灣子公司；單一公司、無 --company 子分流）
-SV_TEMPLATE_ZHONGZI_TAIWAN="${SV_TEMPLATE_ZHONGZI_TAIWAN:-$SV_CARD_SKILL_DIR/templates/20260612-王小明_台灣中子.ai}"
+SV_TEMPLATE_ZHONGZI_TAIWAN="${SV_TEMPLATE_ZHONGZI_TAIWAN:-$SV_CARD_SKILL_DIR/templates/20260612-名片模版_台灣中子.ai}"
 SV_OUTPUT_BASE_ZHONGZI_TAIWAN="${SV_OUTPUT_BASE_ZHONGZI_TAIWAN:-$SV_OUTPUT_BASE/台灣中子}"
+# 經典復刻款 BVI（v0.19.0+，半自動：自動填值，配色 + 收尾留人工）。雙面卡、專屬框集（含 _F/_B）。
+# 輸出沿用中子分流（bvi→中子 / wenhua→中子文化 / taiwan→台灣中子）。
+SV_TEMPLATE_CLASSIC="${SV_TEMPLATE_CLASSIC:-$SV_CARD_SKILL_DIR/templates/20260622-名片模版_經典款.ai}"
 SV_SIDECAR="${SV_SIDECAR:-/tmp/sv_card_fields.json}"
 
 # 預設模板（TW 有手機版）防呆（v0.16.2）：env 覆寫成不存在的舊檔名時（例如換模板
@@ -163,6 +166,7 @@ EOF
         surname=""
         given=""
         title=""
+        title_en=""         # 英文職稱，僅經典款（classic-bvi）用；由簽呈職稱/其他需求欄萃取
         email=""
         mobile=""
         office_ext=""
@@ -175,6 +179,7 @@ EOF
                 --surname)       surname="$2"; shift 2 ;;
                 --given)         given="$2"; shift 2 ;;
                 --title)         title="$2"; shift 2 ;;
+                --title-en)      title_en="$2"; shift 2 ;;
                 --email)         email="$2"; shift 2 ;;
                 --mobile)        mobile="$2"; shift 2 ;;
                 --office-ext)    office_ext="$2"; shift 2 ;;
@@ -188,13 +193,13 @@ EOF
 
         # template-type 驗證
         case "$template_type" in
-            tw|zhongzi-bvi|zhongzi-taiwan) ;;
+            tw|zhongzi-bvi|zhongzi-taiwan|classic-bvi) ;;
             *)
-                echo "ERROR: --template-type 只接受 'tw'、'zhongzi-bvi' 或 'zhongzi-taiwan'，收到: $template_type" >&2
+                echo "ERROR: --template-type 只接受 'tw'、'zhongzi-bvi'、'zhongzi-taiwan' 或 'classic-bvi'，收到: $template_type" >&2
                 exit 1 ;;
         esac
 
-        # --company 驗證（v0.10.1+：中子版分流輸出路徑用）
+        # --company 驗證（v0.10.1+：中子版分流輸出路徑用；v0.19.0+ classic-bvi 加 taiwan）
         if [ "$template_type" = "zhongzi-bvi" ]; then
             case "$company" in
                 bvi|wenhua) ;;
@@ -207,8 +212,26 @@ EOF
                     echo "ERROR: --company 只接受 'bvi' 或 'wenhua'，收到: $company" >&2
                     exit 1 ;;
             esac
+        elif [ "$template_type" = "classic-bvi" ]; then
+            case "$company" in
+                bvi|wenhua|taiwan) ;;
+                "")
+                    echo "ERROR: --template-type classic-bvi 時必填 --company（bvi / wenhua / taiwan）" >&2
+                    echo "  → bvi=中子創新 BVI / wenhua=中子文化 / taiwan=台灣中子創新" >&2
+                    exit 1 ;;
+                *)
+                    echo "ERROR: --company 只接受 'bvi'、'wenhua' 或 'taiwan'，收到: $company" >&2
+                    exit 1 ;;
+            esac
         elif [ -n "$company" ]; then
-            echo "ERROR: --company 僅在 --template-type zhongzi-bvi 時可用" >&2
+            echo "ERROR: --company 僅在 --template-type zhongzi-bvi / classic-bvi 時可用" >&2
+            exit 1
+        fi
+
+        # 經典款英文職稱必填（從簽呈職稱/其他需求欄萃取；缺則由 SKILL 流程停下問）
+        if [ "$template_type" = "classic-bvi" ] && [ -z "$title_en" ]; then
+            echo "ERROR: --template-type classic-bvi 時必填 --title-en（英文職稱）" >&2
+            echo "  → 經典款有獨立英文職稱框 PH_TITLE_EN，請從簽呈職稱/其他需求欄取得" >&2
             exit 1
         fi
 
@@ -231,9 +254,9 @@ EOF
         fi
 
         # legacy_office：1 = 舊無手機版 template（仍用合成框 PH_PHONE_OFFICE）；
-        #                0 = 新版三 template（公司電話靜態於 template，只填分機框 PH_PHONE_EXT）
+        #                0 = 新版 template（公司電話靜態於 template，只填分機框 PH_PHONE_EXT）
         # v0.15.x：公司電話改固定靜態，分機獨立框（對照 PDF 室內分機，留白則框留白）。
-        #          無手機版（20260529）依使用者要求暫不更新，故維持舊 PH_PHONE_OFFICE 邏輯。
+        #          v0.18.0：無手機版已更新為新排版（20260622），改 PH_PHONE_EXT 框，legacy 分支不再用於無手機版。
         legacy_office=0
         # 選模板（v0.10.0+ 加中子版分支；v0.12.0+ 加台灣中子分支）
         if [ "$template_type" = "zhongzi-bvi" ]; then
@@ -262,6 +285,18 @@ EOF
                 echo "⚠️ 台灣中子版目前僅支援有手機版，但簽呈無手機。" >&2
                 echo "   → 暫以有手機模板繼續，PH_PHONE_MOBILE 會留樣本值請手動處理" >&2
             fi
+        elif [ "$template_type" = "classic-bvi" ]; then
+            # 經典復刻款 BVI（v0.19.0+，半自動）：雙面卡、專屬框集，無 vCard / QR
+            template="$SV_TEMPLATE_CLASSIC"
+            if [ ! -f "$template" ]; then
+                echo "ERROR: 找不到經典復刻款模板: $template" >&2
+                echo "  → 請設定 SV_TEMPLATE_CLASSIC 環境變數，或執行 install.sh 後重試" >&2
+                exit 1
+            fi
+            echo "📋 使用經典復刻款模板（半自動：自動填值 → 停下手動配色 → 人工收尾）"
+            if [ -z "$mobile" ]; then
+                echo "⚠️ 經典款雙面皆有手機框，但簽呈無手機 → PH_PHONE_MOBILE_F/_B 會留樣本值，請手動處理。" >&2
+            fi
         elif [ -z "$mobile" ]; then
             # TW 無手機版
             template="$SV_TEMPLATE_NO_MOBILE"
@@ -271,7 +306,7 @@ EOF
                 exit 1
             fi
             echo "📋 使用無手機版模板（簽呈沒填手機）"
-            legacy_office=1   # 無手機版仍是舊框 PH_PHONE_OFFICE（公司電話+分機合成）
+            # v0.18.0：無手機版已改新排版（20260622），用新分機框 PH_PHONE_EXT，與有手機版一致（legacy_office 維持 0）
         else
             # TW 有手機版（預設，新版）
             template="$SV_TEMPLATE"
@@ -288,6 +323,7 @@ EOF
             case "$company" in
                 bvi)    output_base="$SV_OUTPUT_BASE_ZHONGZI" ;;
                 wenhua) output_base="$SV_OUTPUT_BASE_ZHONGZI_WENHUA" ;;
+                taiwan) output_base="$SV_OUTPUT_BASE_ZHONGZI_TAIWAN" ;;  # 經典款 --company taiwan（v0.19.0+）
                 *)      output_base="$SV_OUTPUT_BASE/SV" ;;  # TW 版：根目錄下 SV 子夾（v0.14.0+）
             esac
         fi
@@ -310,7 +346,7 @@ EOF
         TITLE="$title" EMAIL="$email" MOBILE="$mobile" \
         OFFICE_EXT="$office_ext" DEST_DIR="$dest_dir" \
         DEST_PATH="$new_file" LEGACY_OFFICE="$legacy_office" \
-        TEMPLATE_TYPE="$template_type" COMPANY="$company" \
+        TEMPLATE_TYPE="$template_type" COMPANY="$company" TITLE_EN="$title_en" \
         SV_CARD_SCRIPT_DIR="$SV_CARD_SKILL_DIR/scripts" \
         python3 - <<'PYEOF' > "$SV_SIDECAR"
 import json, os, sys
@@ -329,31 +365,9 @@ vcf_name       = en.replace(" ", "") + ".vcf"
 
 legacy_office = os.environ.get("LEGACY_OFFICE") == "1"
 
-fields = {
-    "PH_NAME_CN_SURNAME": os.environ["SURNAME"],
-    "PH_NAME_CN_GIVEN":   os.environ["GIVEN"],
-    "PH_NAME_EN":         en,
-    "PH_TITLE":           os.environ["TITLE"],
-    "PH_EMAIL":           os.environ["EMAIL"],
-}
-
-# 公司電話 / 分機（v0.15.x 改：公司電話固定靜態於 template，分機獨立框）
-if legacy_office:
-    # 舊無手機版 template：合成框 PH_PHONE_OFFICE（公司電話 + 分機；無分機則純號碼）
-    ph_phone_office = phone()["office"]
-    if office_ext:
-        ph_phone_office += "#" + office_ext
-    fields["PH_PHONE_OFFICE"] = ph_phone_office
-else:
-    # 新版三 template：公司電話靜態於 template，只填分機框（對照 PDF 室內分機）
-    # 有分機 → "#" + 分機（例 #375）；留白 → 寫空字串清掉模板範例值（不可不寫，否則殘留 #375）
-    fields["PH_PHONE_EXT"] = ("#" + office_ext) if office_ext else ""
 def to_card_mobile(s):
-    # 名片用 +886 國碼格式：
-    #   1. 空格 → dash
-    #   2. 開頭 0 → +886-
-    #   3. v0.10.3+：尾段連續 6 位數字 → 拆「3+3」加 dash
-    #      例: +886-909-050269 → +886-909-050-269
+    # 名片用 +886 國碼格式：空格→dash、開頭 0→+886-、尾段 6 碼拆「3+3」
+    #   例: 0909-050269 → +886-909-050-269
     import re as _re
     s = s.replace(" ", "-")
     if s.startswith("0"):
@@ -361,19 +375,73 @@ def to_card_mobile(s):
     s = _re.sub(r"(\d{3})(\d{3})$", r"\1-\2", s)
     return s
 
-if mobile_vcard:
-    fields["PH_PHONE_MOBILE"] = to_card_mobile(mobile_vcard)
+def format_mobile_local(s):
+    # 本地分組格式 09XX-XXX-XXX（例 0909-050269 → 0909-050-269）；
+    # 帶 886 國碼先還原本地 0 開頭；非台灣手機（長度/開頭不符）保留原字串
+    import re as _re
+    d = _re.sub(r"\D", "", s)
+    if d.startswith("886"):
+        d = "0" + d[3:]
+    if len(d) == 10 and d.startswith("09"):
+        return d[:4] + "-" + d[4:7] + "-" + d[7:]
+    return s.strip()
 
-# 中子版動態公司名（v0.10.2+）
-# 範本 PH_COMPANY 文字框依 --company 推導：
-#   bvi    → 「中子創新有限公司」（母公司）
-#   wenhua → 「中子文化股份有限公司」（旗下公司）
-COMPANY_NAME_MAP = {
-    "bvi":    "中子創新有限公司",
-    "wenhua": "中子文化股份有限公司",
-}
-if template_type == "zhongzi-bvi" and company in COMPANY_NAME_MAP:
-    fields["PH_COMPANY"] = COMPANY_NAME_MAP[company]
+if template_type == "classic-bvi":
+    # 經典復刻款 BVI（v0.19.0+）：雙面卡專屬框集（含 _F/_B），公司中英依 --company 分支。
+    # 配色 / 收尾留人工；此處只組「填值」欄位。
+    CLASSIC_CO = {
+        "bvi":    ("中子創新有限公司",        "Neutron Innovation (BVI) Ltd."),
+        "wenhua": ("中子文化股份有限公司",     "Neutron Culture Co., Ltd."),
+        "taiwan": ("台灣中子創新股份有限公司",  "Neutron Innovation (Taiwan) Ltd."),
+    }
+    co_cn, co_en = CLASSIC_CO[company]
+    fields = {
+        "PH_NAME_CN":      os.environ["SURNAME"] + os.environ["GIVEN"],
+        "PH_NAME_EN":      en,
+        "PH_TITLE":        os.environ["TITLE"],
+        "PH_TITLE_EN":     os.environ.get("TITLE_EN", ""),
+        "PH_EMAIL":        os.environ["EMAIL"],
+        # 分機格式 ext.NNN（經典款專屬；其他款是 #NNN）；無分機 → 空字串清掉樣本
+        "PH_PHONE_EXT":    ("ext." + office_ext) if office_ext else "",
+        "PH_COMPANY":      co_cn,
+        "PH_COMPANY_EN_F": co_en,
+        "PH_COMPANY_EN_B": co_en,
+    }
+    if mobile_vcard:
+        # 正面純號碼本地分組；背面「Mobile: +886-…」
+        fields["PH_PHONE_MOBILE_F"] = format_mobile_local(mobile_vcard)
+        fields["PH_PHONE_MOBILE_B"] = "Mobile: " + to_card_mobile(mobile_vcard)
+else:
+    fields = {
+        "PH_NAME_CN_SURNAME": os.environ["SURNAME"],
+        "PH_NAME_CN_GIVEN":   os.environ["GIVEN"],
+        "PH_NAME_EN":         en,
+        "PH_TITLE":           os.environ["TITLE"],
+        "PH_EMAIL":           os.environ["EMAIL"],
+    }
+
+    # 公司電話 / 分機（v0.15.x 改：公司電話固定靜態於 template，分機獨立框）
+    if legacy_office:
+        # 舊無手機版 template：合成框 PH_PHONE_OFFICE（公司電話 + 分機；無分機則純號碼）
+        ph_phone_office = phone()["office"]
+        if office_ext:
+            ph_phone_office += "#" + office_ext
+        fields["PH_PHONE_OFFICE"] = ph_phone_office
+    else:
+        # 新版 template：公司電話靜態於 template，只填分機框（對照 PDF 室內分機）
+        # 有分機 → "#" + 分機（例 #375）；留白 → 寫空字串清掉模板範例值（不可不寫，否則殘留 #375）
+        fields["PH_PHONE_EXT"] = ("#" + office_ext) if office_ext else ""
+
+    if mobile_vcard:
+        fields["PH_PHONE_MOBILE"] = to_card_mobile(mobile_vcard)
+
+    # 中子版動態公司名（v0.10.2+）：PH_COMPANY 依 --company 推導
+    COMPANY_NAME_MAP = {
+        "bvi":    "中子創新有限公司",
+        "wenhua": "中子文化股份有限公司",
+    }
+    if template_type == "zhongzi-bvi" and company in COMPANY_NAME_MAP:
+        fields["PH_COMPANY"] = COMPANY_NAME_MAP[company]
 
 # template_type 標記在 sidecar top level，artifacts 子命令會據此 skip vCard/QR（v0.10.0+ 中子版）
 # company 標記在 sidecar top level（v0.10.1+：中子版分流輸出路徑）
@@ -694,6 +762,50 @@ APPLESCRIPT
         echo "✅ OL → $dest/OL-${basename}.ai"
         echo
         echo "📁 最終產出："
+        ls -la "$dest/"
+        ;;
+
+    finalize-classic)
+        # 經典款專屬收尾（v0.19.0+）：原檔 + PNG-24（2000×668）+ OL。
+        # 用於「手動配色完成後」的人工收尾（配合 finalize.jsx 已產出 /tmp/output_*.ai）。
+        # PNG-24：sips 出 PNG（含 alpha）→ PIL 合底色轉 24-bit RGB。
+        #   bg=white → 改色版（已改底色，用白底）；bg=grey → 無改色版（灰底 K70 襯白卡）
+        # 用法：finalize-classic <dest-folder> <basename> [white|grey]
+        dest="$1"
+        basename="$2"
+        bg="${3:-grey}"
+        if [ -z "$dest" ] || [ -z "$basename" ]; then
+            echo "ERROR: finalize-classic 需要 <dest-folder> <basename> [white|grey]" >&2
+            exit 1
+        fi
+        case "$bg" in white|grey) ;; *)
+            echo "ERROR: finalize-classic 第三參數只接受 white / grey，收到: $bg" >&2
+            exit 1 ;;
+        esac
+
+        # 搬原檔
+        mv /tmp/output_original.ai "$dest/${basename}.ai"
+        # 出 PNG-24（雙面 3:1，2000×668）
+        cp "$dest/${basename}.ai" /tmp/temp_classic.pdf
+        sips -s format png --resampleHeightWidth 668 2000 /tmp/temp_classic.pdf --out /tmp/classic_raw.png > /dev/null
+        SV_CLASSIC_BG="$bg" python3 - "$dest/${basename}.png" <<'PYPNG'
+import sys, os
+from PIL import Image
+bg = os.environ.get("SV_CLASSIC_BG", "grey")
+color = (255, 255, 255) if bg == "white" else (76, 76, 76)  # 改色→白底；無改色→灰底 K70(≈76,76,76)
+img = Image.open("/tmp/classic_raw.png").convert("RGBA")
+canvas = Image.new("RGB", img.size, color)  # RGB 無 alpha = 嚴格 PNG-24
+canvas.paste(img, mask=img.split()[3])      # 用 alpha 當遮罩貼上，去掉透明
+canvas.save(sys.argv[1])
+print(f"✅ PNG-24（{bg} 底，{canvas.size[0]}x{canvas.size[1]}）→ {sys.argv[1]}")
+PYPNG
+        rm -f /tmp/temp_classic.pdf /tmp/classic_raw.png
+
+        # 搬 OL
+        mv /tmp/output_ol.ai "$dest/OL-${basename}.ai"
+        echo "✅ OL → $dest/OL-${basename}.ai"
+        echo
+        echo "📁 最終產出（經典款 4 檔：原檔 / OL / PNG-24 / 簽呈 PDF）："
         ls -la "$dest/"
         ;;
 

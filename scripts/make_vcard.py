@@ -11,6 +11,7 @@ StreetVoice 名片 vCard 產生器
     - 套上個人化資料產生新 .vcf
 """
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -40,6 +41,21 @@ def extract_photo_block(template_path: Path) -> str:
             else:
                 break  # PHOTO 結束
     return "\r\n".join(photo_lines)
+
+
+def format_mobile_local(s: str) -> str:
+    """vCard CELL 用本地分組格式：09XX-XXX-XXX（4-3-3），例 0909-050269 → 0909-050-269。
+
+    - 先取純數字；若帶國碼 886 先還原成本地 0 開頭
+    - 台灣手機 10 碼（09 開頭）→ 4-3-3 分組
+    - 其他長度 / 非台灣手機 → 保留原字串（去頭尾空白），不強套格式
+    """
+    digits = re.sub(r"\D", "", s)
+    if digits.startswith("886"):
+        digits = "0" + digits[3:]
+    if len(digits) == 10 and digits.startswith("09"):
+        return f"{digits[:4]}-{digits[4:7]}-{digits[7:]}"
+    return s.strip()
 
 
 def build_vcard(data: dict, photo_block: str = "") -> str:
@@ -72,11 +88,13 @@ def build_vcard(data: dict, photo_block: str = "") -> str:
         f"ORG:{co['name_cn']} ({co['name_en']});",
         f"TITLE:{title}",
         f"EMAIL;type=INTERNET;type=pref:{email}",
+        # TEL 排序：公司電話 → 手機 → 傳真（對齊 macOS 通訊錄匯出版排序）
         f"TEL;type=WORK;type=VOICE;type=pref:{ph['office_vcard_format']}",
-        f"TEL;type=WORK;type=FAX:{ph['fax_vcard_format']}",
     ]
     if mobile:
-        lines.append(f"TEL;type=CELL;type=VOICE:{mobile}")
+        # 手機採本地分組格式 09XX-XXX-XXX（例 0909-050269 → 0909-050-269）
+        lines.append(f"TEL;type=CELL;type=VOICE:{format_mobile_local(mobile)}")
+    lines.append(f"TEL;type=WORK;type=FAX:{ph['fax_vcard_format']}")
     lines.extend([
         f"ADR;type=WORK;type=pref:;;{addr['street']};{addr['district']};{addr['city']};{addr['postal']};{addr['country']}",
         f"URL;type=WORK;type=pref:{cfg['website']}",

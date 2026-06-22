@@ -184,10 +184,11 @@ echo
 echo "🗂️  檢查版型模板..."
 tpl_missing=0
 for tpl in \
-    "20260612-王小明.ai|TW 街聲（有手機，預設）" \
-    "20260529-王小明_無手機版.ai|TW 街聲（無手機）" \
-    "20260612-王小明_中子BVI.ai|中子 BVI" \
-    "20260612-王小明_台灣中子.ai|台灣中子"; do
+    "20260612-名片模版_TW 街聲.ai|TW 街聲（有手機，預設）" \
+    "20260622-名片模版_TW 街聲（無手機）.ai|TW 街聲（無手機）" \
+    "20260612-名片模版_中子BVI.ai|中子 BVI" \
+    "20260612-名片模版_台灣中子.ai|台灣中子" \
+    "20260622-名片模版_經典款.ai|經典復刻款 BVI（半自動）"; do
     fname="${tpl%%|*}"
     label="${tpl##*|}"
     if [ -f "$REPO_DIR/templates/$fname" ]; then
@@ -203,12 +204,41 @@ if [ "$tpl_missing" = "1" ]; then
 fi
 echo
 
+# ─── 2.6 模板字體安裝（v0.19.0+）────────────────────────────────
+# 模板用了非系統內建字體（FakePearl / Mgen+ / Questrial / Noto Sans CJK）。
+# 缺字會讓 Illustrator 跳「遺失字體」，且「使用遺失字體的文字框無法被腳本編輯」→ 自動化失效。
+# 故安裝時一併把 fonts/ 內字體複製到 ~/Library/Fonts/（idempotent）。
+echo "🔤 安裝名片模板字體（fonts/ → ~/Library/Fonts/）..."
+FONT_DST="$HOME/Library/Fonts"
+mkdir -p "$FONT_DST"
+font_new=0
+font_exist=0
+if ls "$REPO_DIR"/fonts/*.ttf "$REPO_DIR"/fonts/*.otf >/dev/null 2>&1; then
+    for ff in "$REPO_DIR"/fonts/*.ttf "$REPO_DIR"/fonts/*.otf; do
+        [ -e "$ff" ] || continue
+        base="$(basename "$ff")"
+        if [ -f "$FONT_DST/$base" ]; then
+            echo "  ⏭  已存在：$base"
+            font_exist=$((font_exist + 1))
+        else
+            cp "$ff" "$FONT_DST/" && { echo "  ✅ 新裝：$base"; font_new=$((font_new + 1)); }
+        fi
+    done
+    echo "  ── 共 新裝 $font_new、已存在 $font_exist（字體↔模板對照與來源見 fonts/README.txt）"
+    if [ "$font_new" -gt 0 ]; then
+        echo "  ⚠️  有新字體安裝 → 請「完全關閉並重新開啟 Illustrator (⌘Q)」字體才會生效。"
+    fi
+else
+    echo "  ⚠️  repo fonts/ 內找不到字體檔（請確認 repo 完整 checkout）。" >&2
+fi
+echo
+
 # ─── 3. 寫入使用者偏好 ─────────────────────────────────────────
 echo "⚙️  寫入使用者偏好 $CONFIG_FILE ..."
 mkdir -p "$CONFIG_DIR"
 
 default_output="$HOME/Documents/名片"  # v0.14.0+：名片根目錄；TW 版自動接 /SV 子夾
-default_template="$SKILL_DIR/templates/20260612-王小明.ai"
+default_template="$SKILL_DIR/templates/20260612-名片模版_TW 街聲.ai"
 
 # 若已有舊設定，沿用為新預設
 if [ -f "$CONFIG_FILE" ]; then
