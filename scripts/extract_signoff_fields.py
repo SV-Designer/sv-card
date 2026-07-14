@@ -100,7 +100,7 @@ def extract_fields(pdf_path):
     if out["card_name_raw"]:
         # 中文姓名欄位後面的「(數字)」一律去掉、絕不進 PH_NAME（例「王小美(454)」→「王小美」）。
         # 全/半形括號 + 全/半形數字都吃（簽呈填法不一致），並去尾端空白（v0.19.x）。
-        # 偵測旗標（v0.22.0）：有偵測到員編就標記，main() 會印 ⚠️ 提醒確認名片只印姓名。
+        # 旗標（v0.22.0）：偵測到員編就標記。去員編＝自動修正型（唯一正解）→ main() 僅印 ℹ️ 告知、不停下問（v0.23.1）。
         out["card_name_had_employee_id"] = bool(re.search(r"[（(][\d０-９]+[）)]", out["card_name_raw"]))
         cn = re.sub(r"[（(][\d０-９]+[）)]", "", out["card_name_raw"]).strip()
         out["card_name_cn"] = cn
@@ -206,8 +206,9 @@ def main():
             "   名片 PH_NAME_EN 要印「只英文 / 只中文 / 中英都印」？（.vcf/URL/QR 已自動只取 ASCII 英文）\n"
         )
     if fields.get("card_name_had_employee_id"):
+        # 去員編＝自動修正型（唯一正解，員編絕不上名片）→ 僅告知、不停下問（v0.23.1）
         sys.stderr.write(
-            "⚠️ 中文姓名含員編「(數字)」，已自動去除只留姓名 —— 請確認名片只印姓名、不印員編。\n"
+            "ℹ️ 中文姓名含員編「(數字)」，已自動去除只留姓名（唯一正解、自動修正，無需停下問）。\n"
         )
     if fields.get("mobile_nonstandard"):
         sys.stderr.write(

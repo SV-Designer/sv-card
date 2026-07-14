@@ -6,6 +6,12 @@
 
 ## [Unreleased]
 
+## [0.23.1] — 2026-07-14
+
+### Changed
+- **`card_name_had_employee_id` 由「⚠️ 停下問」改為「ℹ️ 告知不停下」**（`extract_signoff_fields.py`）：去員編是**自動修正型**（唯一正解——員工編號絕不會印上名片，沒有第二種答案），不該歸類成需人決策的「自動偵測」。原訊息「⚠️ …請確認名片只印姓名」會誤導成停下問使用者；改為「ℹ️ …已自動去除只留姓名（唯一正解、自動修正，無需停下問）」，純告知、不打斷流程。`docs/pdf-extract.md` 同步標注「自動修正型、僅 ℹ️ 告知不停下」。
+- 校準了 v0.22.0 的分類錯誤：其餘偵測旗標（english_name_has_cjk / title_has_mixed_lang / email_nonwhitelist / template_unsupported / card_name_differs_from_applicant / other_requests_nonempty）仍屬「自動偵測」型、維持 🛑 停下問；mobile_nonstandard 維持提醒核對。
+
 ## [0.23.0] — 2026-07-14
 
 ### Added

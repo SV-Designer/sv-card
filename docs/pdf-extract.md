@@ -22,7 +22,7 @@
 ## Claude 必看項（腳本抓不到的判斷）
 
 > **v0.22.0+：非常規欄位已機械化偵測。** `extract-pdf` 會在 JSON output 加旗標並對 stderr 印 ⚠️，**看到 ⚠️ 一律照指示處理、別略過**。
-> v0.22.0 三旗標：`english_name_has_cjk`（英文名中英混填 → 🛑 印英/中/兩者）、`card_name_had_employee_id`（姓名帶員編已去除 → 確認只印姓名）、`mobile_nonstandard`（手機非標準 → init 自動 3-3-3、請核對）。
+> v0.22.0 三旗標：`english_name_has_cjk`（英文名中英混填 → 🛑 印英/中/兩者，停下問）、`card_name_had_employee_id`（姓名帶員編已**自動去除**＝自動修正型、僅 ℹ️ 告知**不停下**）、`mobile_nonstandard`（手機非標準 → init 自動 3-3-3、請核對）。
 > v0.23.0 再加 5 旗標（皆「自動偵測」型 → 停下問，不自動決定）：`title_has_mixed_lang`（職稱括號含英文 → 🛑 印中/英）、`email_nonwhitelist`（非 @streetvoice.com/@neuin.com → 🛑 確認網域）、`template_unsupported`（版型非三支援版 → 🛑 不自行製作）、`card_name_differs_from_applicant`（名片姓名≠申請人 → 🛑 確認是否預期）、`other_requests_nonempty`（備註欄非空 → 讀內容判斷是否特殊請求）。
 
 - **機械萃取全 null（關鍵欄位全抓不到）**→ 中子系列 PDF 中文 layer 圖片化（CID 編碼）常見，`extract-pdf` 會印 `⚠️` 警告。此時**以 Claude 視覺萃取（Read PDF）為準、逐欄與使用者人工確認**（失去機械雙重檢核），不可照單全收直接跑。
