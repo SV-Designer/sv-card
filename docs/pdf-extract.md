@@ -8,8 +8,8 @@
 |---|---|
 | `form_no` | 表單號（→ Step 1.5 簽呈備份檔名）|
 | `surname_cn` / `given_cn` | 中文姓名拆分（→ `--surname` / `--given`，含 18 個常見複姓判斷）|
-| `card_name_cn` | 中文全名去員編（→ `--chinese`）|
-| `english_name_no_alias` | 英文名去 alias（→ `--english`，alias 偵測：首 token 含中文字 = alias）|
+| `card_name_cn` | 中文全名去員編（→ `--chinese`）：姓名欄後的「(數字)」一律去掉、絕不進 PH_NAME（全/半形括號＋數字都吃，例「王小美(454)」→「王小美」）|
+| `english_name_no_alias` | 英文名去 alias（→ `--english`，alias 偵測：首 token 含中文字 = alias）。**注意**：`--english` 值原樣進名片 PH_NAME_EN（可中英混填），但 `.vcf` 檔名 + 上傳 URL + QR **只取 ASCII 英文**（見下方必看項）|
 | `english_alias` | 中文 alias（如「阿明 Ming Wang」→ `阿明`）|
 | `title` | 職稱（→ `--title`）|
 | `email` | Email（→ `--email`）|
@@ -30,6 +30,8 @@
 - **`template_type` 非「TW 街聲」、「中子BVI」、「台灣中子」**（CN / EN）→ 停下問（未支援）
 - **「名片上的姓名」與「申請人」不同**（外部夥伴情境）→ 雖然腳本仍能抽，但要跟使用者確認此為預期
 - **職稱中英文混填**（如「事業發展總監（英文: Business Development Director）」）→ **停下問使用者用中文還是英文**，再決定 `--title` 傳哪個值
+- **英文名中英混填**（如「王小美」）：名片顯示 PH_NAME_EN 用哪個仍要停下問（使用者可能要「只印英文」或「中英都印」）；但 `.vcf` 檔名 / 上傳 URL / QR **自動只取 ASCII 英文**（→ `Owner.vcf`），中文絕不進檔名，毋須手動改名。若英文名完全無 ASCII（純中文）→ 屬非常規、停下問。
+- **手機格式自動 3-3-3**：標準台灣手機（10 碼 09XXXXXXXX，不論簽呈填法有無空格/dash）名片一律輸出 `+886-9XX-XXX-XXX`（例 `0909050269` → `+886-912-324-850`）；非標準號碼沿用舊格式。此為 `to_card_mobile` 自動處理，無需人工。
 - **Email 網域白名單**：`@streetvoice.com`（TW 員工）、`@neuin.com`（中子員工）皆視為正常；其他網域 → 停下問
 
 > 中子分支的 init 參數與輸出細節另見 [`branch-neutron.md`](branch-neutron.md)。

@@ -98,7 +98,9 @@ def extract_fields(pdf_path):
     m = re.search(r"名片上的姓名[ \t]+(\S+?)[ \t]+公司", text)
     out["card_name_raw"] = m.group(1) if m else None
     if out["card_name_raw"]:
-        cn = re.sub(r"\(\d+\)", "", out["card_name_raw"])
+        # 中文姓名欄位後面的「(數字)」一律去掉、絕不進 PH_NAME（例「王小美(454)」→「王小美」）。
+        # 全/半形括號 + 全/半形數字都吃（簽呈填法不一致），並去尾端空白（v0.19.x）。
+        cn = re.sub(r"[（(][\d０-９]+[）)]", "", out["card_name_raw"]).strip()
         out["card_name_cn"] = cn
         out["surname_cn"], out["given_cn"] = split_chinese_name(cn)
     else:

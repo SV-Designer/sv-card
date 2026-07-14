@@ -361,14 +361,27 @@ en             = os.environ["EN"]
 template_type  = os.environ["TEMPLATE_TYPE"]
 company        = os.environ["COMPANY"]
 dest_path      = os.environ["DEST_PATH"]  # v0.10.3+：jsx 用此繞 corrupt fullName
-vcf_name       = en.replace(" ", "") + ".vcf"
+# vcf 檔名一律只取英文（v0.19.x）：英文名欄位可能中英混填（例「王小美」），
+# .vcf 檔名 + 上傳 URL + QR 只用 ASCII 英文部分（→ Owner.vcf），中文絕不進檔名。
+# 卡片顯示 PH_NAME_EN 仍用完整 en（保留使用者填的中英混合，兩者互不影響）。
+# 若英文名完全沒有 ASCII（純中文）→ fallback 回原 en，交由 SOP「非常規簽呈」停下問。
+import re as _re_vcf
+_en_ascii = _re_vcf.sub(r"[^\x00-\x7F]", "", en).strip()
+vcf_name       = (_en_ascii if _en_ascii else en).replace(" ", "") + ".vcf"
 
 legacy_office = os.environ.get("LEGACY_OFFICE") == "1"
 
 def to_card_mobile(s):
-    # 名片用 +886 國碼格式：空格→dash、開頭 0→+886-、尾段 6 碼拆「3+3」
-    #   例: 0909-050269 → +886-909-050-269
+    # 名片用 +886 國碼格式（v0.19.x）：標準台灣手機（10 碼 09XXXXXXXX，不論簽呈填法有無
+    # 空格/dash）一律輸出 +886-9XX-XXX-XXX（3-3-3），例 0909050269 → +886-912-324-850。
+    # 修正舊版只拆末 6 碼、簽呈手機無空格時中間組沒切開（→ +886-912324-850）的問題。
     import re as _re
+    digits = _re.sub(r"\D", "", s)
+    if digits.startswith("886"):
+        digits = "0" + digits[3:]
+    if len(digits) == 10 and digits.startswith("09"):
+        return "+886-" + digits[1:4] + "-" + digits[4:7] + "-" + digits[7:]
+    # 非標準號碼（長度/開頭不符）：沿用舊邏輯「空格→dash、開頭0→+886-、末6碼拆3+3」
     s = s.replace(" ", "-")
     if s.startswith("0"):
         s = "+886-" + s[1:]
