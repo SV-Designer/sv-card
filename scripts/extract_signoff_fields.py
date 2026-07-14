@@ -157,6 +157,26 @@ def extract_fields(pdf_path):
     out["form_remark"] = remark
     out["form_remark_is_placeholder"] = (remark == FORM_REMARK_PLACEHOLDER)
 
+    # 非常規欄位偵測旗標（v0.23.0）：把 docs「Claude 必看項」再機械化 5 條，萃取階段主動示警。
+    # 全屬「自動偵測」型（答案需人決定）→ main() 印 ⚠️ 停下問，不自動決定。
+    _title = out.get("title") or ""
+    # 職稱中英混填：偵測「括號內含英文註記」（如「總監（英文: Director）」/「設計師（Designer）」）；
+    # 「AI 工程師」「iOS 設計師」這類非括號英文不誤觸。
+    out["title_has_mixed_lang"] = bool(re.search(r"[（(][^）)]*[A-Za-z]{2,}[^）)]*[）)]", _title))
+    # Email 網域白名單：非 @streetvoice.com（TW）也非 @neuin.com（中子）→ 要確認
+    _email = out.get("email") or ""
+    out["email_nonwhitelist"] = bool(_email) and not _email.lower().endswith(("@streetvoice.com", "@neuin.com"))
+    # 版型非三支援版（TW 街聲 / 中子BVI / 台灣中子）→ 沒有對應模板、一定要停下
+    _tpl = (out.get("template_type") or "").replace(" ", "")
+    out["template_unsupported"] = bool(out.get("template_type")) and _tpl not in ("TW街聲", "中子BVI", "台灣中子")
+    # 名片姓名 ≠ 申請人（外部夥伴情境或填錯）→ 要確認是否預期
+    out["card_name_differs_from_applicant"] = (
+        bool(out.get("applicant_name") and out.get("card_name_cn"))
+        and out.get("applicant_name") != out.get("card_name_cn")
+    )
+    # 其他需求 / 備註欄非空 → 內容要人讀、判斷是否特殊請求
+    out["other_requests_nonempty"] = bool((out.get("other_requests") or "").strip())
+
     return out
 
 
@@ -192,6 +212,27 @@ def main():
     if fields.get("mobile_nonstandard"):
         sys.stderr.write(
             "⚠️ 手機非標準 10 碼 09 格式，init 會自動 normalize 成 +886-9XX-XXX-XXX —— 請核對號碼正確。\n"
+        )
+    # v0.23.0 再機械化 5 條「Claude 必看項」（皆自動偵測型 → 停下問，不自動決定）
+    if fields.get("title_has_mixed_lang"):
+        sys.stderr.write(
+            "⚠️ 職稱疑似中英混填（括號內含英文）—— 🛑 停下問使用者名片職稱要印中文還是英文。\n"
+        )
+    if fields.get("email_nonwhitelist"):
+        sys.stderr.write(
+            "⚠️ Email 不在白名單（非 @streetvoice.com / @neuin.com）—— 🛑 停下問使用者確認網域正確。\n"
+        )
+    if fields.get("template_unsupported"):
+        sys.stderr.write(
+            "⚠️ 名片版型非三支援版（TW 街聲 / 中子BVI / 台灣中子）—— 🛑 停下問，未支援版型不自行製作。\n"
+        )
+    if fields.get("card_name_differs_from_applicant"):
+        sys.stderr.write(
+            "⚠️ 名片姓名與申請人不同（可能外部夥伴或填錯）—— 🛑 停下問使用者確認是否預期。\n"
+        )
+    if fields.get("other_requests_nonempty"):
+        sys.stderr.write(
+            "⚠️ 「其他需求 / 備註」欄非空 —— 請讀內容判斷是否特殊請求，有特殊請求就停下問。\n"
         )
 
 

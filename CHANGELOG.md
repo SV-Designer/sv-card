@@ -6,6 +6,21 @@
 
 ## [Unreleased]
 
+## [0.23.0] — 2026-07-14
+
+### Added
+- **`extract-pdf` 再機械化 5 條「Claude 必看項」偵測旗標**（`extract_signoff_fields.py`）：延續 v0.22.0，把原本靠 Claude 眼力抓的非常規欄位判斷搬進萃取階段主動示警。**全屬「自動偵測」型**——偵測到就印 ⚠️ 停下問，不自動決定（有別於 v0.21.0 唯一正解的「自動修正」）：
+  - `title_has_mixed_lang`：職稱含「括號內英文註記」（如「總監（英文: Director）」）→ 🛑 停下問印中文還是英文。精準鎖定括號英文，「AI 工程師」「iOS 設計師」不誤觸。
+  - `email_nonwhitelist`：Email 非 `@streetvoice.com`（TW）也非 `@neuin.com`（中子）→ 🛑 停下問確認網域（可能 typo 或外部人員）。
+  - `template_unsupported`：名片版型非三支援版（TW 街聲 / 中子BVI / 台灣中子）→ 🛑 停下（無對應模板，如 CN/EN 版）。
+  - `card_name_differs_from_applicant`：名片姓名 ≠ 申請人 → 🛑 停下問（外部夥伴情境或填錯）。
+  - `other_requests_nonempty`：「其他需求 / 備註」欄非空 → 讀內容判斷是否特殊請求。
+- `docs/pdf-extract.md`「Claude 必看項」同步列出五旗標。
+
+### Notes
+- 定位釐清（回應使用者提問）：**腳本化 ≠ 以後都不問**。分兩型——「自動修正」（唯一正解，如員編/手機格式，靜默改好不問）與「自動偵測」（需人決策，如本版 5 條，印 ⚠️ 保證停下問、把漏問風險歸零）。對「印錯要重印」的名片，重點是消滅漏問而非減少發問。
+- 真實簽呈實測 5 旗標全 False（零誤報）；合成正例逐條驗證觸發正確。
+
 ## [0.22.0] — 2026-07-14
 
 ### Added
