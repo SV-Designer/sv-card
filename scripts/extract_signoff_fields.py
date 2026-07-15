@@ -166,9 +166,13 @@ def extract_fields(pdf_path):
     # Email 網域白名單：非 @streetvoice.com（TW）也非 @neuin.com（中子）→ 要確認
     _email = out.get("email") or ""
     out["email_nonwhitelist"] = bool(_email) and not _email.lower().endswith(("@streetvoice.com", "@neuin.com"))
-    # 版型非三支援版（TW 街聲 / 中子BVI / 台灣中子）→ 沒有對應模板、一定要停下
+    # 版型非四支援版（TW 街聲 / 中子BVI / 台灣中子 / 經典復刻款BVI）→ 沒有對應模板、一定要停下
+    # v0.23.2 修正：漏了「經典復刻款BVI」（card_helper.sh --template-type classic-bvi，
+    # 已輕度畢業、走手動逐步 SOP），原白名單只有 3 種會誤判成未支援。
     _tpl = (out.get("template_type") or "").replace(" ", "")
-    out["template_unsupported"] = bool(out.get("template_type")) and _tpl not in ("TW街聲", "中子BVI", "台灣中子")
+    out["template_unsupported"] = bool(out.get("template_type")) and _tpl not in (
+        "TW街聲", "中子BVI", "台灣中子", "經典復刻款BVI"
+    )
     # 名片姓名 ≠ 申請人（外部夥伴情境或填錯）→ 要確認是否預期
     out["card_name_differs_from_applicant"] = (
         bool(out.get("applicant_name") and out.get("card_name_cn"))
@@ -225,7 +229,7 @@ def main():
         )
     if fields.get("template_unsupported"):
         sys.stderr.write(
-            "⚠️ 名片版型非三支援版（TW 街聲 / 中子BVI / 台灣中子）—— 🛑 停下問，未支援版型不自行製作。\n"
+            "⚠️ 名片版型非四支援版（TW 街聲 / 中子BVI / 台灣中子 / 經典復刻款BVI）—— 🛑 停下問，未支援版型不自行製作。\n"
         )
     if fields.get("card_name_differs_from_applicant"):
         sys.stderr.write(
