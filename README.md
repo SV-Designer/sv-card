@@ -17,7 +17,7 @@ StreetVoice 街聲名片自動化製作。
 
 Claude 會自動照進階區的步驟跑完整套，過程中只會跟你確認 1-2 次（重啟 Claude Code 那一步）。
 
-> 🔗 URL：https://github.com/chensoo8911/sv-card
+> 🔗 URL：https://github.com/SV-Designer/claude-sv-card
 
 完整系統需求清單見下方「進階 → 系統需求」，最低是 **macOS + Adobe Illustrator + Claude Code**，其他套件 
 Claude 會自動處理。
@@ -71,9 +71,9 @@ Claude 會自動：
 
 ### 安裝步驟（idempotent，可重複跑）
 
-1. **clone repo**（預設位置 `~/Projects/sv-card`，可依使用者偏好調整）
+1. **clone repo**（預設位置 `~/Projects/claude-sv-card`，可依使用者偏好調整）
    ```bash
-   git clone https://github.com/chensoo8911/sv-card.git ~/Projects/sv-card
+   git clone https://github.com/SV-Designer/claude-sv-card.git ~/Projects/claude-sv-card
    ```
 
 2. **🔐 授權驗證 ⏸**：跑 install.sh 前，跟使用者明確徵詢授權：
@@ -89,7 +89,7 @@ Claude 會自動：
 
 3. **跑 install.sh**（會自動串接 setup-mcp.sh）
    ```bash
-   bash ~/Projects/sv-card/install.sh --yes
+   bash ~/Projects/claude-sv-card/install.sh --yes
    ```
    `--yes` 模式會使用預設值（輸出 `~/Documents/名片/SV`、模板用 repo 內附範例、`SV_OUTPUT_CONFIRMED=0` 留待首次製作時引導確認）。
 
