@@ -19,11 +19,11 @@ set -e
 SV_MCP_DIR="${SV_MCP_DIR:-$HOME/mcp-servers/illustrator-mcp-server}"
 REPO_URL="https://github.com/spencerhhubert/illustrator-mcp-server.git"
 
-# 找 patch 檔（兩種情境：從 repo 跑 / 從 ~/.claude/skills/claude-sv-card/ 跑）
+# 找 patch 檔（兩種情境：從 repo 跑 / 從 ~/.claude/skills/sv-card/ 跑）
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PATCH_FILE="$SCRIPT_DIR/mcp-patches/illustrator-mcp-server.patch"
 if [ ! -f "$PATCH_FILE" ]; then
-    PATCH_FILE="$HOME/.claude/skills/claude-sv-card/scripts/mcp-patches/illustrator-mcp-server.patch"
+    PATCH_FILE="$HOME/.claude/skills/sv-card/scripts/mcp-patches/illustrator-mcp-server.patch"
 fi
 if [ ! -f "$PATCH_FILE" ]; then
     echo "❌ 找不到 patch 檔 $PATCH_FILE" >&2

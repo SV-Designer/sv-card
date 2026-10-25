@@ -6,7 +6,7 @@
 
 **9a. 預查 server 是否已有同名檔（必跑）**
 ```bash
-~/.claude/skills/claude-sv-card/scripts/card_helper.sh upload-vcard --check-only "$DEST_DIR/<無空格英文名>.vcf"
+~/.claude/skills/sv-card/scripts/card_helper.sh upload-vcard --check-only "$DEST_DIR/<無空格英文名>.vcf"
 ```
 腳本走「拿密碼 + preflight + curl --list-only」流程，不上傳。最後一行印：
 - `exists` → 進 **9b GATE**
@@ -24,7 +24,7 @@ Claude 用此句問使用者（**逐字**，把實際檔名代入）：
 
 **9c. 上傳（含 retry 邏輯）**
 ```bash
-~/.claude/skills/claude-sv-card/scripts/card_helper.sh upload-vcard "$DEST_DIR/<無空格英文名>.vcf"
+~/.claude/skills/sv-card/scripts/card_helper.sh upload-vcard "$DEST_DIR/<無空格英文名>.vcf"
 ```
 
 > **內部流程**：
@@ -46,7 +46,7 @@ Claude 用此句問使用者（**逐字**，把實際檔名代入）：
 
 **9d. 驗證手動上傳結果**（9c 失敗後使用者手動 Transmit 上傳完，告知 Claude 後跑）
 ```bash
-~/.claude/skills/claude-sv-card/scripts/card_helper.sh verify-vcard "$DEST_DIR/<無空格英文名>.vcf"
+~/.claude/skills/sv-card/scripts/card_helper.sh verify-vcard "$DEST_DIR/<無空格英文名>.vcf"
 ```
 腳本抓 server 上同名 vcf 內容 cmp 對本地，印：
 - `match` → Claude 轉達「✅ vCard 已驗證 server 端與本地一致」+ URL

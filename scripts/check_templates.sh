@@ -108,7 +108,7 @@ fi
 if [ "$MODE" = "update" ]; then
   [ -f "$ALLOWLIST" ] && cp "$ALLOWLIST" "$ALLOWLIST.bak"
   {
-    echo "# claude-sv-card 模板文字白名單（由 check_templates.sh --update 產生）"
+    echo "# sv-card 模板文字白名單（由 check_templates.sh --update 產生）"
     echo "# 一行一種允許出現在模板上的文字。只該有：假人資料（王小明／Ming Wang／假號）"
     echo "# 與公司公開資訊（地址、總機、統編、官網）。真實員工姓名／電話絕不該進來。"
     echo "# 更新前務必人眼看過 diff——這份檔案就是「什麼算乾淨」的定義。"

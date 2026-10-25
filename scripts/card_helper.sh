@@ -65,7 +65,7 @@ set -e
 [ -f "$HOME/.config/sv-card/env" ] && . "$HOME/.config/sv-card/env"
 
 # 可由環境變數或 ~/.config/sv-card/env 覆寫
-SV_CARD_SKILL_DIR="${SV_CARD_SKILL_DIR:-$HOME/.claude/skills/claude-sv-card}"
+SV_CARD_SKILL_DIR="${SV_CARD_SKILL_DIR:-$HOME/.claude/skills/sv-card}"
 SV_TEMPLATE_DEFAULT="$SV_CARD_SKILL_DIR/templates/20260930-名片模版_TW 街聲.ai"
 SV_TEMPLATE="${SV_TEMPLATE:-$SV_TEMPLATE_DEFAULT}"
 SV_TEMPLATE_NO_MOBILE="${SV_TEMPLATE_NO_MOBILE:-$SV_CARD_SKILL_DIR/templates/20260930-名片模版_TW 街聲（無手機）.ai}"

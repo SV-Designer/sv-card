@@ -1,6 +1,6 @@
 # Changelog
 
-本檔案記錄 claude-sv-card 的變更歷史。格式參考 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/)。
+本檔案記錄 sv-card 的變更歷史。格式參考 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/)。
 
 版本號採 [Semantic Versioning](https://semver.org/lang/zh-TW/)：MAJOR.MINOR.PATCH。
 
@@ -78,7 +78,7 @@
 ## [0.24.4] — 2026-07-16
 
 ### Changed
-- **更名 `sv-card` → `claude-sv-card`**：兩帳號 GitHub repo（個人帳號＋公司帳號）、本機兩邊 clone 資料夾、active skill 資料夾與內部 4 條 symlink、`SKILL.md` name 欄位、`~/.claude/settings.json` 8 條權限白名單、`sv-card-release.sh` 的 ME/SV 路徑變數、git hook `_sync-templates.sh` 的 REPO 路徑、全域 CLAUDE.md 路由表，全部同步改名。CHANGELOG 內的歷史路徑提及保留原樣（準確描述當時狀態）。
+- **更名 `sv-card` → `sv-card`**：兩帳號 GitHub repo（個人帳號＋公司帳號）、本機兩邊 clone 資料夾、active skill 資料夾與內部 4 條 symlink、`SKILL.md` name 欄位、`~/.claude/settings.json` 8 條權限白名單、`sv-card-release.sh` 的 ME/SV 路徑變數、git hook `_sync-templates.sh` 的 REPO 路徑、全域 CLAUDE.md 路由表，全部同步改名。CHANGELOG 內的歷史路徑提及保留原樣（準確描述當時狀態）。
 
 ### Changed
 - **統一 CHANGELOG 裡混用的測試假名**：幾處「實測某簽呈踩到 bug」的歷史敘述使用了多組不同的測試示範姓名，為求全 repo 一致性統一改用既有慣例「王小明 / Ming Wang」（含 typo 示範情境：改為語意相同的 Ming Wan→Ming Wang）。docs/pdf-extract.md、docs/SOP.md 裡同款用詞一併同步。

@@ -18,9 +18,9 @@
 
 ```bash
 # 選 A 或回 "OK"
-~/.claude/skills/claude-sv-card/scripts/card_helper.sh confirm-firstrun "~/Documents/名片"
+~/.claude/skills/sv-card/scripts/card_helper.sh confirm-firstrun "~/Documents/名片"
 # 選 B
-~/.claude/skills/claude-sv-card/scripts/card_helper.sh confirm-firstrun "<使用者輸入路徑>"
+~/.claude/skills/sv-card/scripts/card_helper.sh confirm-firstrun "<使用者輸入路徑>"
 ```
 
 **c. 告訴使用者**：「資料夾已建立並開啟給您看。以後做名片都會存到這裡，可隨時編輯 `~/.config/sv-card/env` 改設定。」

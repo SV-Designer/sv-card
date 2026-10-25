@@ -17,7 +17,7 @@ StreetVoice 街聲名片自動化製作。
 
 Claude 會自動照進階區的步驟跑完整套，過程中只會跟你確認 1-2 次（重啟 Claude Code 那一步）。
 
-> 🔗 URL：https://github.com/SV-Designer/claude-sv-card
+> 🔗 URL：https://github.com/SV-Designer/sv-card
 
 完整系統需求清單見下方「進階 → 系統需求」，最低是 **macOS + Adobe Illustrator + Claude Code**，其他套件 
 Claude 會自動處理。
@@ -71,9 +71,9 @@ Claude 會自動：
 
 ### 安裝步驟（idempotent，可重複跑）
 
-1. **clone repo**（預設位置 `~/Projects/claude-sv-card`，可依使用者偏好調整）
+1. **clone repo**（預設位置 `~/Projects/sv-card`，可依使用者偏好調整）
    ```bash
-   git clone https://github.com/SV-Designer/claude-sv-card.git ~/Projects/claude-sv-card
+   git clone https://github.com/SV-Designer/sv-card.git ~/Projects/sv-card
    ```
 
 2. **🔐 授權驗證 ⏸**：跑 install.sh 前，跟使用者明確徵詢授權：
@@ -81,7 +81,7 @@ Claude 會自動：
    > 1. clone illustrator-mcp-server 到 `~/mcp-servers/`
    > 2. 修改你的 `~/.claude.json`（加 MCP server 設定，會先備份）
    > 3. 修改你的 `~/.claude/settings.json`（加 sv-card 相關 allow 規則，會先備份）
-   > 4. 在 `~/.claude/skills/claude-sv-card/` 建 symlink、寫 `~/.config/sv-card/env`
+   > 4. 在 `~/.claude/skills/sv-card/` 建 symlink、寫 `~/.config/sv-card/env`
    >
    > 是否授權？」
 
@@ -89,14 +89,14 @@ Claude 會自動：
 
 3. **跑 install.sh**（會自動串接 setup-mcp.sh）
    ```bash
-   bash ~/Projects/claude-sv-card/install.sh --yes
+   bash ~/Projects/sv-card/install.sh --yes
    ```
    `--yes` 模式會使用預設值（輸出 `~/Documents/名片/SV`、模板用 repo 內附範例、`SV_OUTPUT_CONFIRMED=0` 留待首次製作時引導確認）。
 
 4. **install.sh 內部會做的事**（你不需手動拆解，但需要時可知道）：
    - 檢查 Adobe Illustrator / python3 / `qrcode` 套件（缺 qrcode 會自動 pip install）
    - 自動跑 `scripts/setup-mcp.sh`：clone `spencerhhubert/illustrator-mcp-server` 到 `~/mcp-servers/`、套 sv-card patch（去掉 Claude activate + 加 600s timeout）、寫入 `~/.claude.json` 的 `mcpServers.illustrator`（會先備份 `.bak`）
-   - 在 `~/.claude/skills/claude-sv-card/` 建 symlink（SKILL.md / scripts / templates / docs）→ 指回 repo
+   - 在 `~/.claude/skills/sv-card/` 建 symlink（SKILL.md / scripts / templates / docs）→ 指回 repo
    - 寫使用者偏好到 `~/.config/sv-card/env`（含 `SV_OUTPUT_CONFIRMED` marker）
    - 寫入 `~/.claude/settings.json` 的 `permissions.allow`：加 sv-card 相關 Bash + `mcp__illustrator__run` 規則，日常做名片不會再被 prompt 中斷
 
@@ -115,7 +115,7 @@ Claude 會自動：
 | `setup-mcp.sh` 報 `uv: command not found` | 缺 uv | `brew install uv`，再重跑 |
 | `git apply --check` 失敗 | server.py 已被別人改過 | 看 `scripts/mcp-patches/illustrator-mcp-server.patch` 手動 merge |
 | 重啟後 Claude 仍看不到工具 | settings 寫到 project-level 而非 user-level | 直接 grep `~/.claude.json` 看 `mcpServers.illustrator` 是否在頂層 |
-| 模板 `.ai` 缺失 | repo 內 templates/ 沒抓到 | 確認 `~/.claude/skills/claude-sv-card/templates/20260930-名片模版_TW 街聲.ai` symlink 沒斷 |
+| 模板 `.ai` 缺失 | repo 內 templates/ 沒抓到 | 確認 `~/.claude/skills/sv-card/templates/20260930-名片模版_TW 街聲.ai` symlink 沒斷 |
 | 首次 upload-vcard 跳 Keychain 對話框 | 正常 — macOS 第一次 access keychain 會問 | 按 "Always Allow" |
 
 ## 結構
@@ -153,7 +153,7 @@ sv-card/
 
 ```bash
 SV_OUTPUT_BASE="$HOME/Documents/名片"   # v0.14.0+：名片根目錄；TW 版自動接 /SV，中子各版接 /中子 等子夾
-SV_TEMPLATE="$HOME/.claude/skills/claude-sv-card/templates/20260930-名片模版_TW 街聲.ai"
+SV_TEMPLATE="$HOME/.claude/skills/sv-card/templates/20260930-名片模版_TW 街聲.ai"
 SV_TRANSMIT_FAVORITE="Streetvoice"
 SV_TRANSMIT_REMOTE_DIR="/vcard"
 ```

@@ -185,7 +185,7 @@ Claude 自動依序：
 
 ### 模板物件命名（首次設定，已完成）
 
-模板位置：`~/.claude/skills/claude-sv-card/templates/20260930-名片模版_TW 街聲.ai`（install.sh 會 symlink 進去）
+模板位置：`~/.claude/skills/sv-card/templates/20260930-名片模版_TW 街聲.ai`（install.sh 會 symlink 進去）
 
 可編輯欄位都已用 `PH_` 前綴命名：
 
@@ -303,7 +303,7 @@ vCard 與名片**不完全相同**，注意：
 
 單一 Bash 指令完成 建資料夾 + 複製模板 + 開檔 + 輪詢 + **寫 sidecar JSON**：
 ```bash
-~/.claude/skills/claude-sv-card/scripts/card_helper.sh init \
+~/.claude/skills/sv-card/scripts/card_helper.sh init \
     --chinese "王小明" --english "Ming Wang" \
     --surname "王" --given "小明" \
     --title "美術設計" \
@@ -316,7 +316,7 @@ vCard 與名片**不完全相同**，注意：
 
 腳本內部行為：
 1. `mkdir -p $SV_OUTPUT_BASE/SV/{chinese}_{english}`（TW 版；路徑來自 `~/.config/sv-card/env` 或環境變數，v0.14.0+ `SV_OUTPUT_BASE` 為根目錄、TW 接 `/SV`，預設 `~/Documents/名片/SV/`）
-2. `cp -L $SV_TEMPLATE` 到該資料夾並重新命名為 `{YYYYMMDD}-{chinese}_{english}.ai`（模板預設 `~/.claude/skills/claude-sv-card/templates/20260930-名片模版_TW 街聲.ai`）
+2. `cp -L $SV_TEMPLATE` 到該資料夾並重新命名為 `{YYYYMMDD}-{chinese}_{english}.ai`（模板預設 `~/.claude/skills/sv-card/templates/20260930-名片模版_TW 街聲.ai`）
 3. **寫 sidecar `/tmp/sv_card_fields.json`**，內含 `fields` 區塊（7 個 PH_*）+ `artifacts` 區塊（vCard/QR 所需欄位）。內部推導：
    - `mobile_display = mobile.replace(" ", "-")` → 名片用
    - `vcf_name = en.replace(" ", "") + ".vcf"`
@@ -335,7 +335,7 @@ vCard 與名片**不完全相同**，注意：
 Claude 在 init 完成、拿到 `$DEST_DIR` 之後，立即備份簽呈 PDF 到該資料夾：
 
 ```bash
-~/.claude/skills/claude-sv-card/scripts/card_helper.sh backup-pdf "<簽呈 PDF 原始路徑>" "$DEST_DIR" [<form-no>]
+~/.claude/skills/sv-card/scripts/card_helper.sh backup-pdf "<簽呈 PDF 原始路徑>" "$DEST_DIR" [<form-no>]
 ```
 
 **內部行為**（v0.10.3+ `backup_signoff_pdf.py`）：
@@ -363,7 +363,7 @@ Claude 在 init 完成、拿到 `$DEST_DIR` 之後，立即備份簽呈 PDF 到�
 Claude 透過 MCP 執行（**無需傳資料，自動讀 sidecar**）：
 
 ```javascript
-$.evalFile(Folder("~").fsName + "/.claude/skills/claude-sv-card/scripts/replace_fields.jsx");
+$.evalFile(Folder("~").fsName + "/.claude/skills/sv-card/scripts/replace_fields.jsx");
 ```
 
 replace_fields.jsx 內部行為：
@@ -379,7 +379,7 @@ replace_fields.jsx 內部行為：
 
 單一 Bash 指令完成 vCard、QR SVG、預處理：
 ```bash
-~/.claude/skills/claude-sv-card/scripts/card_helper.sh artifacts
+~/.claude/skills/sv-card/scripts/card_helper.sh artifacts
 ```
 
 此命令無 args 時自動帶 `--from /tmp/sv_card_fields.json`，從 sidecar 的 `artifacts` 區塊讀：surname / given / en / title / email / mobile / folder / vcf_name。
@@ -405,7 +405,7 @@ $.global.QR_OPTS = {
     cmykBlack: 88
 };
 // Folder("~") 展開為家目錄，跨機器通用（ExtendScript 不支援 ~ 在字串字面值內展開）
-$.evalFile(Folder("~").fsName + "/.claude/skills/claude-sv-card/scripts/place_qr.jsx");
+$.evalFile(Folder("~").fsName + "/.claude/skills/sv-card/scripts/place_qr.jsx");
 ```
 
 > 為什麼用 .jsx：避開 AppleScript 字串層轉義風險、便於版本管理、未來新名片款（中子/CN/EN）可直接重用。
@@ -439,7 +439,7 @@ app.activeDocument.save();
 **12a. 一次跑完 Illustrator 端**（清殘留 + 存 original + 外框化 + 存 OL）：
 
 ```javascript
-$.evalFile(Folder("~").fsName + "/.claude/skills/claude-sv-card/scripts/finalize.jsx");
+$.evalFile(Folder("~").fsName + "/.claude/skills/sv-card/scripts/finalize.jsx");
 ```
 
 finalize.jsx 內部行為：
@@ -451,7 +451,7 @@ finalize.jsx 內部行為：
 **12b. 一次搬完檔 + JPG + 列產出**：
 
 ```bash
-~/.claude/skills/claude-sv-card/scripts/card_helper.sh finalize "$DEST_DIR" "$BASENAME"
+~/.claude/skills/sv-card/scripts/card_helper.sh finalize "$DEST_DIR" "$BASENAME"
 ```
 > `$DEST_DIR` 和 `$BASENAME` 是 Step 3 init 印出的；BASENAME 例：`20260527-王小明_Ming Wang`
 >
@@ -467,7 +467,7 @@ finalize.jsx 內部行為：
 
 **9a. 預查（必跑）**：
 ```bash
-~/.claude/skills/claude-sv-card/scripts/card_helper.sh upload-vcard --check-only "$DEST_DIR/{無空格英文名}.vcf"
+~/.claude/skills/sv-card/scripts/card_helper.sh upload-vcard --check-only "$DEST_DIR/{無空格英文名}.vcf"
 ```
 印 `exists` / `new`。`exists` 觸發 9b GATE，`new` 直接 9c。
 
@@ -475,7 +475,7 @@ finalize.jsx 內部行為：
 
 **9c. 上傳**：
 ```bash
-~/.claude/skills/claude-sv-card/scripts/card_helper.sh upload-vcard "$DEST_DIR/{無空格英文名}.vcf"
+~/.claude/skills/sv-card/scripts/card_helper.sh upload-vcard "$DEST_DIR/{無空格英文名}.vcf"
 ```
 
 子命令內部（9c）：
@@ -493,7 +493,7 @@ finalize.jsx 內部行為：
 
 **9d. 驗證**（9c 失敗 + 使用者手動 Transmit 上傳完後跑）：
 ```bash
-~/.claude/skills/claude-sv-card/scripts/card_helper.sh verify-vcard "$DEST_DIR/{無空格英文名}.vcf"
+~/.claude/skills/sv-card/scripts/card_helper.sh verify-vcard "$DEST_DIR/{無空格英文名}.vcf"
 ```
 抓 server 上同名 vcf 內容 cmp 對本地：
 - `match` → 已驗證一致
@@ -569,14 +569,14 @@ finalize.jsx 內部行為：
 
 | 用途 | 路徑 |
 |---|---|
-| 模板 .ai（已含 `PH_QRCODE` 命名）| `~/.claude/skills/claude-sv-card/templates/20260930-名片模版_TW 街聲.ai` |
-| vCard 產生器 | `~/.claude/skills/claude-sv-card/scripts/make_vcard.py` |
-| **QR Code 產生器**（取代 qrcode-monkey）| `~/.claude/skills/claude-sv-card/scripts/make_qr.py` |
-| **Artifacts 合併腳本**（Step 8+9+10a，CLI 介面）| `~/.claude/skills/claude-sv-card/scripts/make_card_artifacts.py` |
-| **Bash 操作合集**（init / save / finalize / upload-vcard）| `~/.claude/skills/claude-sv-card/scripts/card_helper.sh` |
-| **欄位替換 jsx**（Step 6+7 合併）| `~/.claude/skills/claude-sv-card/scripts/replace_fields.jsx` |
-| **QR 置入 + 染色 jsx**（Step 10 主邏輯）| `~/.claude/skills/claude-sv-card/scripts/place_qr.jsx` |
-| **GATE 後合併收尾 jsx**（Step 12a）| `~/.claude/skills/claude-sv-card/scripts/finalize.jsx` |
+| 模板 .ai（已含 `PH_QRCODE` 命名）| `~/.claude/skills/sv-card/templates/20260930-名片模版_TW 街聲.ai` |
+| vCard 產生器 | `~/.claude/skills/sv-card/scripts/make_vcard.py` |
+| **QR Code 產生器**（取代 qrcode-monkey）| `~/.claude/skills/sv-card/scripts/make_qr.py` |
+| **Artifacts 合併腳本**（Step 8+9+10a，CLI 介面）| `~/.claude/skills/sv-card/scripts/make_card_artifacts.py` |
+| **Bash 操作合集**（init / save / finalize / upload-vcard）| `~/.claude/skills/sv-card/scripts/card_helper.sh` |
+| **欄位替換 jsx**（Step 6+7 合併）| `~/.claude/skills/sv-card/scripts/replace_fields.jsx` |
+| **QR 置入 + 染色 jsx**（Step 10 主邏輯）| `~/.claude/skills/sv-card/scripts/place_qr.jsx` |
+| **GATE 後合併收尾 jsx**（Step 12a）| `~/.claude/skills/sv-card/scripts/finalize.jsx` |
 | ~~名片替換 jsx（舊版）~~ | 已於 v0.26.0 刪除——功能早被 `replace_fields.jsx` 的 PH_ 命名替換取代，留著只會讓人誤讀成還在用 |
 | Illustrator MCP server | 由使用者另行安裝（fork: spencerhhubert/illustrator-mcp-server，需去掉 Claude activate、加長 timeout）|
 | 使用者偏好設定 | `~/.config/sv-card/env`（install.sh 寫入；可覆寫 SV_OUTPUT_BASE、SV_TEMPLATE）|

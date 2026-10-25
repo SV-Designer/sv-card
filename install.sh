@@ -5,7 +5,7 @@
 # 行為（全部 idempotent，可重複執行）：
 #   1. 檢查必要依賴（Adobe Illustrator, Python3, qrcode / pypdf / pdfplumber 套件）
 #   2. 提示使用者 illustrator-mcp-server 安裝狀態（不自動裝，因需 Claude Code MCP 設定）
-#   3. 建立 ~/.claude/skills/claude-sv-card/ 內的 symlink (SKILL.md/scripts/templates/docs)
+#   3. 建立 ~/.claude/skills/sv-card/ 內的 symlink (SKILL.md/scripts/templates/docs)
 #   4. 互動式問使用者偏好（SV_OUTPUT_BASE 等），寫入 ~/.config/sv-card/env
 #
 # 用法：
@@ -15,7 +15,7 @@
 set -e
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
-SKILL_DIR="$HOME/.claude/skills/claude-sv-card"
+SKILL_DIR="$HOME/.claude/skills/sv-card"
 CONFIG_DIR="$HOME/.config/sv-card"
 CONFIG_FILE="$CONFIG_DIR/env"
 
@@ -147,7 +147,7 @@ else
 fi
 echo
 
-# ─── 2. 建立 ~/.claude/skills/claude-sv-card/ symlink ─────────────────
+# ─── 2. 建立 ~/.claude/skills/sv-card/ symlink ─────────────────
 echo "🔗 設定 skill 資料夾 $SKILL_DIR ..."
 mkdir -p "$SKILL_DIR"
 
@@ -317,10 +317,10 @@ allow = data["permissions"]["allow"]
 # 用 ~ 形式（字面字串）— Claude Code 對 allow rule 是字面比對，
 # Bash 命令字串通常以 ~/... 出現，故 ~ 形式才會 match。
 to_add = [
-    "Bash(~/.claude/skills/claude-sv-card/scripts/card_helper.sh:*)",
-    "Bash(python3 ~/.claude/skills/claude-sv-card/scripts/make_card_artifacts.py:*)",
-    "Bash(~/.claude/skills/claude-sv-card/install.sh:*)",
-    "Bash(~/.claude/skills/claude-sv-card/scripts/setup-mcp.sh:*)",
+    "Bash(~/.claude/skills/sv-card/scripts/card_helper.sh:*)",
+    "Bash(python3 ~/.claude/skills/sv-card/scripts/make_card_artifacts.py:*)",
+    "Bash(~/.claude/skills/sv-card/install.sh:*)",
+    "Bash(~/.claude/skills/sv-card/scripts/setup-mcp.sh:*)",
     "mcp__illustrator__run",
 ]
 added = []
@@ -346,7 +346,7 @@ mkdir -p "$out_base"
 echo "🎉 安裝完成！"
 echo
 echo "下一步："
-echo "  1. 確認 ~/.claude/skills/claude-sv-card/SKILL.md 已可被 Claude Code 載入（重啟 Claude Code）"
+echo "  1. 確認 ~/.claude/skills/sv-card/SKILL.md 已可被 Claude Code 載入（重啟 Claude Code）"
 echo "  2. 在 Claude Code 中說「幫我做 SV 名片」+ 附簽呈 PDF 即可觸發"
 echo "     （首次製作時會引導您確認存放位置）"
 echo "  3. 若要改設定，編輯 ${CONFIG_FILE}"
