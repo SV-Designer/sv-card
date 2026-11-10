@@ -2,6 +2,8 @@
 
 > 本檔內容自 SKILL.md「Step 0」搬出（逐字保留）。何時觸發：`card_helper.sh check-firstrun` 印 `run-step0` 時。
 
+> 📁 本檔指令裡的 `<SKILL_DIR>`＝SKILL.md 開頭給的 skill 資料夾路徑（`${CLAUDE_SKILL_DIR}` 展開後的值）。**執行前一定要換成實際路徑**，原樣照抄會報 `no such file`。
+
 **a. 用以下精簡訊息問使用者**（不要加贅字）：
 
 ```
@@ -18,9 +20,9 @@
 
 ```bash
 # 選 A 或回 "OK"
-~/.claude/skills/sv-card/scripts/card_helper.sh confirm-firstrun "~/Documents/名片"
+<SKILL_DIR>/scripts/card_helper.sh confirm-firstrun "~/Documents/名片"
 # 選 B
-~/.claude/skills/sv-card/scripts/card_helper.sh confirm-firstrun "<使用者輸入路徑>"
+<SKILL_DIR>/scripts/card_helper.sh confirm-firstrun "<使用者輸入路徑>"
 ```
 
 **c. 告訴使用者**：「資料夾已建立並開啟給您看。以後做名片都會存到這裡，可隨時編輯 `~/.config/sv-card/env` 改設定。」

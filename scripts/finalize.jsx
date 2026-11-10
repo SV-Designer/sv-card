@@ -5,7 +5,7 @@
 //       originalTmp: "/tmp/output_original.ai",  // 原檔暫存路徑
 //       olTmp:       "/tmp/output_ol.ai"          // OL CS6 暫存路徑
 //   };
-//   $.evalFile(Folder("~").fsName + "/.claude/skills/sv-card/scripts/finalize.jsx");
+//   $.evalFile("${CLAUDE_SKILL_DIR}/scripts/finalize.jsx");
 //
 // 取代原本 GATE 後的 2 個 mcp__illustrator__run 呼叫：
 //   1. 清殘留 + saveAs original.ai

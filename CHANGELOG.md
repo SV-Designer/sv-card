@@ -4,6 +4,18 @@
 
 版本號採 [Semantic Versioning](https://semver.org/lang/zh-TW/)：MAJOR.MINOR.PATCH。
 
+## [0.31.0] — 2026-11-10
+
+### Fixed
+- 🔴 **`install.sh` 建的 `SKILL.md` symlink 指向不存在的 `skill/SKILL.md`**（SKILL.md 實際在 repo 根目錄）→ 斷掉的 symlink，skill 裝完載不起來。改指 repo 根目錄的 `SKILL.md`。
+- **Homebrew 升級 python3 後讀簽呈失敗（`No module named 'pdfplumber'`）**：pip 裝的套件不會跟著新版 Python 走。`card_helper.sh` 新增自動挑選：依序試 `SV_PYTHON`（env 可指定）→ PATH 上的 `python3` → macOS 內建 `/usr/bin/python3`，用第一個裝齊 pdfplumber／pypdf／qrcode 的。
+
+### Changed
+- **路徑可攜化**：SKILL.md 改用 `${CLAUDE_SKILL_DIR}`、docs 用 `<SKILL_DIR>` 佔位，skill 放全域或專案資料夾都能跑；新增 `allowed-tools`。需要 **Claude Code v2.1.310 以上**。
+- **skill 名稱去掉 `claude-` 前綴**：現在叫 `sv-card`。
+- **`install.sh` 新增 `--skill-dir <路徑>`**：可裝成專案限定（`<專案>/.claude/skills/sv-card`），預設仍是全域 `~/.claude/skills/sv-card`。權限白名單改成依實際安裝位置寫入（絕對路徑＋家目錄底下時補 `~` 形式）；拿掉從沒對上過的 `install.sh` 規則。
+- README：補 Claude Code 版本需求、兩種安裝位置、第一次叫用會跳「Use skill?」確認框（選 don't ask again）、pdfplumber 錯誤的排解。
+
 ## [0.30.0] — 2026-09-30
 
 ### Changed

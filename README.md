@@ -48,6 +48,7 @@ Claude 會自動：
 | 做名片時 Illustrator 沒開起來 | 第一次跑時 Claude 會說「好的，準備開始！請完全關閉 illustrator (⌘Q)」，先把 Illustrator 關掉（⌘Q）再重觸發 |
 | 簽呈 PDF 資料萃取錯了 | 直接告訴 Claude「職稱應該是 XXX」，它會重做 |
 | 想換名片存放路徑 | 編輯 `~/.config/sv-card/env`，改 `SV_OUTPUT_BASE="你的新路徑"` |
+| 讀簽呈時出現 `No module named 'pdfplumber'` | 通常是 Homebrew 升級了 Python、套件沒跟過去。腳本會自動改找裝齊套件的 Python（含 macOS 內建 `/usr/bin/python3`）；都找不到時跟 Claude 說「幫我補裝 sv-card 的 Python 套件」，或在 `~/.config/sv-card/env` 加 `SV_PYTHON="/你的/python3"` 指定 |
 | 想找以前做過的名片 | 都在 `~/Documents/名片/SV/`（或你自己設的路徑）內，依中文姓名分資料夾 |
 
 如 Claude 無法正常運作，請截圖 slack 洽產品工程部。
@@ -66,7 +67,7 @@ Claude 會自動：
 跟使用者確認他符合以下系統需求（任一不符就先停下來告知使用者）：
 - macOS
 - Adobe Illustrator CC 2024 以上已安裝
-- Claude Code v2.0+（既然他正在跟你對話，已具備）
+- Claude Code **v2.1.310 以上**（`claude --version` 確認；SKILL.md 用了 `${CLAUDE_SKILL_DIR}` 路徑變數，這是實測可用的版本，更舊版未驗證）
 - 已安裝 `uv`（Python 套件管理器）— `command -v uv` 確認；沒裝可建議 `brew install uv`
 
 ### 安裝步驟（idempotent，可重複跑）
@@ -81,7 +82,7 @@ Claude 會自動：
    > 1. clone illustrator-mcp-server 到 `~/mcp-servers/`
    > 2. 修改你的 `~/.claude.json`（加 MCP server 設定，會先備份）
    > 3. 修改你的 `~/.claude/settings.json`（加 sv-card 相關 allow 規則，會先備份）
-   > 4. 在 `~/.claude/skills/sv-card/` 建 symlink、寫 `~/.config/sv-card/env`
+   > 4. 在 `~/.claude/skills/sv-card/` 建 symlink（或你指定的專案資料夾，見 step 3）、寫 `~/.config/sv-card/env`
    >
    > 是否授權？」
 
@@ -93,10 +94,19 @@ Claude 會自動：
    ```
    `--yes` 模式會使用預設值（輸出 `~/Documents/名片/SV`、模板用 repo 內附範例、`SV_OUTPUT_CONFIRMED=0` 留待首次製作時引導確認）。
 
+   **裝在哪**（預設全域，多數人用預設即可）：
+
+   | 裝法 | 指令 | 效果 |
+   |---|---|---|
+   | 全域（預設） | `bash ~/Projects/sv-card/install.sh --yes` | 任何資料夾開 Claude Code 都叫得到 |
+   | 專案限定 | `bash ~/Projects/sv-card/install.sh --yes --skill-dir <專案資料夾>/.claude/skills/sv-card` | 只有從 `<專案資料夾>` 底下開 Claude Code 才叫得到 |
+
+   權限白名單會依實際安裝位置寫入，不用手改。
+
 4. **install.sh 內部會做的事**（你不需手動拆解，但需要時可知道）：
    - 檢查 Adobe Illustrator / python3 / `qrcode` 套件（缺 qrcode 會自動 pip install）
    - 自動跑 `scripts/setup-mcp.sh`：clone `spencerhhubert/illustrator-mcp-server` 到 `~/mcp-servers/`、套 sv-card patch（去掉 Claude activate + 加 600s timeout）、寫入 `~/.claude.json` 的 `mcpServers.illustrator`（會先備份 `.bak`）
-   - 在 `~/.claude/skills/sv-card/` 建 symlink（SKILL.md / scripts / templates / docs）→ 指回 repo
+   - 在 skill 資料夾（預設 `~/.claude/skills/sv-card/`）建 symlink（SKILL.md / scripts / templates / docs）→ 指回 repo
    - 寫使用者偏好到 `~/.config/sv-card/env`（含 `SV_OUTPUT_CONFIRMED` marker）
    - 寫入 `~/.claude/settings.json` 的 `permissions.allow`：加 sv-card 相關 Bash + `mcp__illustrator__run` 規則，日常做名片不會再被 prompt 中斷
 
@@ -106,7 +116,7 @@ Claude 會自動：
 
 6. **重啟後再驗證**：請使用者跟你說「`mcp__illustrator__run` 工具存在嗎？」你可用 ToolSearch 確認。沒有的話，可能是 `~/.claude.json` 寫入位置不對（user-level vs project-level），改寫入 project-level 看看
 
-7. **完成**：告訴使用者「現在可以對 Claude Code 說『做名片』+ 附簽呈 PDF 就會觸發了（Claude 會讀簽呈自動判斷版型）。首次製作時會引導確認名片存放位置。」
+7. **完成**：告訴使用者「現在可以對 Claude Code 說『做名片』+ 附簽呈 PDF 就會觸發了（Claude 會讀簽呈自動判斷版型）。首次製作時會引導確認名片存放位置。**第一次叫用會跳一個『Use skill?』確認框，選 don't ask again，之後就不會再問。**」
 
 ### 常見錯誤 & 修法
 

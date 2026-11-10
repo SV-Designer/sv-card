@@ -65,7 +65,7 @@ set -e
 [ -f "$HOME/.config/sv-card/env" ] && . "$HOME/.config/sv-card/env"
 
 # 可由環境變數或 ~/.config/sv-card/env 覆寫
-SV_CARD_SKILL_DIR="${SV_CARD_SKILL_DIR:-$HOME/.claude/skills/sv-card}"
+SV_CARD_SKILL_DIR="${SV_CARD_SKILL_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 SV_TEMPLATE_DEFAULT="$SV_CARD_SKILL_DIR/templates/20260930-名片模版_TW 街聲.ai"
 SV_TEMPLATE="${SV_TEMPLATE:-$SV_TEMPLATE_DEFAULT}"
 SV_TEMPLATE_NO_MOBILE="${SV_TEMPLATE_NO_MOBILE:-$SV_CARD_SKILL_DIR/templates/20260930-名片模版_TW 街聲（無手機）.ai}"
@@ -86,6 +86,23 @@ SV_TEMPLATE_ZHONGZI_TAIWAN="${SV_TEMPLATE_ZHONGZI_TAIWAN:-$SV_CARD_SKILL_DIR/tem
 SV_TEMPLATE_ZHONGZI_TAIWAN_NO_MOBILE="${SV_TEMPLATE_ZHONGZI_TAIWAN_NO_MOBILE:-$SV_CARD_SKILL_DIR/templates/20260824-名片模版_台灣中子（無手機版）.ai}"
 SV_OUTPUT_BASE_ZHONGZI_TAIWAN="${SV_OUTPUT_BASE_ZHONGZI_TAIWAN:-$SV_OUTPUT_BASE/台灣中子}"
 SV_SIDECAR="${SV_SIDECAR:-/tmp/sv_card_fields.json}"
+
+# 挑一個「依賴套件都裝齊」的 Python（v0.31.0+）。
+# 起因：Homebrew 升級 python3（例 3.14→3.15）後，pip --user 裝的套件不會跟過去，
+# PATH 上的 python3 變成缺 pdfplumber → extract-pdf 直接 ModuleNotFoundError。
+# 順序：env 指定 SV_PYTHON > PATH 上的 python3 > macOS 內建 /usr/bin/python3；
+# 用 find_spec 只查「裝了沒」不真的 import，快。全都缺 → 退回 python3，讓原本的錯誤訊息照常出現。
+sv_pick_python() {
+    local c
+    for c in ${SV_PYTHON:+"$SV_PYTHON"} python3 /usr/bin/python3; do
+        command -v "$c" >/dev/null 2>&1 || continue
+        if "$c" -c "import importlib.util as u,sys; sys.exit(0 if all(u.find_spec(m) for m in ('pdfplumber','pypdf','qrcode')) else 1)" 2>/dev/null; then
+            echo "$c"; return 0
+        fi
+    done
+    echo python3
+}
+SV_PYTHON="$(sv_pick_python)"
 
 # 預設模板（TW 有手機版）防呆（v0.16.2）：env 覆寫成不存在的舊檔名時（例如換模板
 # 檔名後 ~/.config/sv-card/env 仍寫死舊路徑），fallback 內建預設並警告，而非直接中止
@@ -124,14 +141,14 @@ case "$cmd" in
             fi
             # 中子系列跳過 artifacts（無 vCard / QR；v0.10.0+）
             # v0.12.0+：改判「非 tw 一律跳過」，涵蓋 zhongzi-bvi / zhongzi-taiwan 及未來新版型
-            tt=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('template_type','tw'))" "$SV_SIDECAR")
+            tt=$("$SV_PYTHON" -c "import json,sys; print(json.load(open(sys.argv[1])).get('template_type','tw'))" "$SV_SIDECAR")
             if [ "$tt" != "tw" ]; then
                 echo "📋 中子系列跳過 artifacts（無 vCard / QR）"
                 exit 0
             fi
-            exec python3 "$SV_CARD_SKILL_DIR/scripts/make_card_artifacts.py" --from "$SV_SIDECAR"
+            exec "$SV_PYTHON" "$SV_CARD_SKILL_DIR/scripts/make_card_artifacts.py" --from "$SV_SIDECAR"
         else
-            exec python3 "$SV_CARD_SKILL_DIR/scripts/make_card_artifacts.py" "$@"
+            exec "$SV_PYTHON" "$SV_CARD_SKILL_DIR/scripts/make_card_artifacts.py" "$@"
         fi
         ;;
 
@@ -328,7 +345,7 @@ EOF
         DEST_PATH="$new_file" LEGACY_OFFICE="$legacy_office" \
         TEMPLATE_TYPE="$template_type" COMPANY="$company" \
         SV_CARD_SCRIPT_DIR="$SV_CARD_SKILL_DIR/scripts" \
-        python3 - <<'PYEOF' > "$SV_SIDECAR"
+        "$SV_PYTHON" - <<'PYEOF' > "$SV_SIDECAR"
 import json, os, sys
 sys.path.insert(0, os.environ["SV_CARD_SCRIPT_DIR"])
 from company_config import phone
@@ -734,10 +751,10 @@ APPLESCRIPT
             exit 1
         fi
         if [ -n "$form_no" ]; then
-            exec python3 "$SV_CARD_SKILL_DIR/scripts/backup_signoff_pdf.py" \
+            exec "$SV_PYTHON" "$SV_CARD_SKILL_DIR/scripts/backup_signoff_pdf.py" \
                 "$pdf" "$dest" --form-no "$form_no"
         else
-            exec python3 "$SV_CARD_SKILL_DIR/scripts/backup_signoff_pdf.py" "$pdf" "$dest"
+            exec "$SV_PYTHON" "$SV_CARD_SKILL_DIR/scripts/backup_signoff_pdf.py" "$pdf" "$dest"
         fi
         ;;
 
@@ -749,7 +766,7 @@ APPLESCRIPT
             echo "ERROR: extract-pdf 需要 <pdf-path>" >&2
             exit 1
         fi
-        exec python3 "$SV_CARD_SKILL_DIR/scripts/extract_signoff_fields.py" "$pdf"
+        exec "$SV_PYTHON" "$SV_CARD_SKILL_DIR/scripts/extract_signoff_fields.py" "$pdf"
         ;;
 
     *)

@@ -3,7 +3,7 @@
 // 用法：
 //
 //   A. 從 sidecar JSON 讀（推薦，由 card_helper.sh init 寫入）：
-//      $.evalFile(Folder("~").fsName + "/.claude/skills/sv-card/scripts/replace_fields.jsx");
+//      $.evalFile("${CLAUDE_SKILL_DIR}/scripts/replace_fields.jsx");
 //      → 讀 /tmp/sv_card_fields.json 的 fields 區塊（或 $.global.SIDECAR_PATH 覆寫）
 //
 //   B. 手動覆寫 $.global.FIELDS（emergency override，需先確保 sidecar 不存在）：

@@ -5,12 +5,14 @@
 # 行為（全部 idempotent，可重複執行）：
 #   1. 檢查必要依賴（Adobe Illustrator, Python3, qrcode / pypdf / pdfplumber 套件）
 #   2. 提示使用者 illustrator-mcp-server 安裝狀態（不自動裝，因需 Claude Code MCP 設定）
-#   3. 建立 ~/.claude/skills/sv-card/ 內的 symlink (SKILL.md/scripts/templates/docs)
+#   3. 建立 skill 資料夾（預設 ~/.claude/skills/sv-card/）內的 symlink (SKILL.md/scripts/templates/docs)
 #   4. 互動式問使用者偏好（SV_OUTPUT_BASE 等），寫入 ~/.config/sv-card/env
 #
 # 用法：
-#   bash install.sh           # 互動模式
-#   bash install.sh --yes     # 全部用預設值，不問
+#   bash install.sh                                  # 互動模式，裝到全域（任何資料夾開 Claude 都叫得到）
+#   bash install.sh --yes                            # 全部用預設值，不問
+#   bash install.sh --skill-dir <專案>/.claude/skills/sv-card
+#                                                    # 裝成「專案限定」：只有從 <專案> 底下開 Claude 才叫得到
 #
 set -e
 
@@ -20,7 +22,18 @@ CONFIG_DIR="$HOME/.config/sv-card"
 CONFIG_FILE="$CONFIG_DIR/env"
 
 NON_INTERACTIVE=0
-[ "$1" = "--yes" ] && NON_INTERACTIVE=1
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --yes) NON_INTERACTIVE=1 ;;
+        --skill-dir)
+            [ -n "$2" ] || { echo "ERROR: --skill-dir 後面要接路徑" >&2; exit 1; }
+            SKILL_DIR="$2"; shift ;;
+        *) echo "ERROR: 不認得的參數：$1（可用：--yes、--skill-dir <路徑>）" >&2; exit 1 ;;
+    esac
+    shift
+done
+SKILL_DIR="${SKILL_DIR/#\~/$HOME}"   # 允許傳 ~/...
+SKILL_DIR="${SKILL_DIR%/}"
 
 echo "🚀 sv-card 安裝開始（repo: ${REPO_DIR}）"
 echo
@@ -147,7 +160,7 @@ else
 fi
 echo
 
-# ─── 2. 建立 ~/.claude/skills/sv-card/ symlink ─────────────────
+# ─── 2. 建立 skill 資料夾 symlink ─────────────────────────────
 echo "🔗 設定 skill 資料夾 $SKILL_DIR ..."
 mkdir -p "$SKILL_DIR"
 
@@ -172,7 +185,8 @@ link_into_skill() {
     echo "  ✅ $linkname → $target"
 }
 
-link_into_skill "$REPO_DIR/skill/SKILL.md"   "SKILL.md"
+# v0.31.0：SKILL.md 在 repo 根目錄（舊版誤指 skill/SKILL.md → 斷掉的 symlink，skill 載不起來）
+link_into_skill "$REPO_DIR/SKILL.md"         "SKILL.md"
 link_into_skill "$REPO_DIR/scripts"          "scripts"
 link_into_skill "$REPO_DIR/templates"        "templates"
 link_into_skill "$REPO_DIR/docs"             "docs"
@@ -293,7 +307,7 @@ else
 fi
 
 if [ "$write_allow" = "1" ]; then
-    SETTINGS_FILE_EXPORT="$SETTINGS_FILE" python3 <<'PYEOF'
+    SETTINGS_FILE_EXPORT="$SETTINGS_FILE" SKILL_DIR_EXPORT="$SKILL_DIR" python3 <<'PYEOF'
 import json, os, shutil
 from pathlib import Path
 
@@ -314,15 +328,24 @@ else:
 
 data.setdefault("permissions", {}).setdefault("allow", [])
 allow = data["permissions"]["allow"]
-# 用 ~ 形式（字面字串）— Claude Code 對 allow rule 是字面比對，
-# Bash 命令字串通常以 ~/... 出現，故 ~ 形式才會 match。
-to_add = [
-    "Bash(~/.claude/skills/sv-card/scripts/card_helper.sh:*)",
-    "Bash(python3 ~/.claude/skills/sv-card/scripts/make_card_artifacts.py:*)",
-    "Bash(~/.claude/skills/sv-card/install.sh:*)",
-    "Bash(~/.claude/skills/sv-card/scripts/setup-mcp.sh:*)",
-    "mcp__illustrator__run",
-]
+# Claude Code 對 allow rule 是字面比對。
+# v0.31.0：SKILL.md 用 ${CLAUDE_SKILL_DIR}，命令會以「絕對路徑」出現 → 一定要寫絕對路徑版；
+# 在家目錄底下時也補 ~ 形式（相容舊版 SKILL.md／手打命令）。
+# 為什麼不能只靠 SKILL.md 的 allowed-tools：它的授權只到使用者下一則訊息，
+# 做名片中途有 GATE（Step 0／6／9b）會跨回合，GATE 之後的命令要靠這裡的規則。
+skill_dir = os.environ["SKILL_DIR_EXPORT"]
+home = os.path.expanduser("~")
+forms = [skill_dir]
+if skill_dir.startswith(home + "/"):
+    forms.append("~" + skill_dir[len(home):])
+to_add = []
+for d in forms:
+    to_add += [
+        f"Bash({d}/scripts/card_helper.sh:*)",
+        f"Bash(python3 {d}/scripts/make_card_artifacts.py:*)",
+        f"Bash({d}/scripts/setup-mcp.sh:*)",
+    ]
+to_add.append("mcp__illustrator__run")
 added = []
 for rule in to_add:
     if rule not in allow:
@@ -346,8 +369,13 @@ mkdir -p "$out_base"
 echo "🎉 安裝完成！"
 echo
 echo "下一步："
-echo "  1. 確認 ~/.claude/skills/sv-card/SKILL.md 已可被 Claude Code 載入（重啟 Claude Code）"
-echo "  2. 在 Claude Code 中說「幫我做 SV 名片」+ 附簽呈 PDF 即可觸發"
+echo "  1. 重啟 Claude Code，確認 ${SKILL_DIR}/SKILL.md 已被載入"
+case "$SKILL_DIR" in
+    "$HOME/.claude/skills/"*) ;;
+    */.claude/skills/*) echo "     ⚠️  這是專案限定安裝：要從 ${SKILL_DIR%/.claude/skills/*} 底下開 Claude Code 才叫得到" ;;
+esac
+echo "  2. 在 Claude Code 中說「做名片」+ 附簽呈 PDF 即可觸發"
+echo "     （第一次叫用會跳「Use skill?」確認框，選 don't ask again 之後就不會再問）"
 echo "     （首次製作時會引導您確認存放位置）"
 echo "  3. 若要改設定，編輯 ${CONFIG_FILE}"
 echo
